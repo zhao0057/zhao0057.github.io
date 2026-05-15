@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>维斯特洛大陆互动地图</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -2325,7 +2328,13 @@
     renderEventList();
     setupTermInteractions();
     setupMobileControls();
-    selectEvent(majorEvents[0].id, { fly: false, openPopup: false });
+    resetAppState({ animate: false });
+
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        resetAppState({ animate: false });
+      }
+    });
 
     if (DEMO_MODE) {
       document.body.classList.add("demo-mode");
@@ -2711,11 +2720,7 @@
       });
 
       reset.addEventListener("click", () => {
-        document.body.classList.remove("mobile-events-open");
-        document.body.classList.remove("mobile-detail-tab");
-        document.getElementById("termPopover").hidden = true;
-        map.closePopup();
-        map.fitBounds(imageBounds, { padding: [18, 18], animate: true });
+        resetAppState({ animate: true });
       });
 
       document.querySelectorAll("[data-mobile-tab]").forEach((button) => {
@@ -2754,6 +2759,16 @@
         document.body.classList.remove("mobile-detail-tab");
       }
       document.body.classList.add("mobile-events-open");
+    }
+
+    function resetAppState(options = {}) {
+      const animate = options.animate === true;
+      document.body.classList.remove("mobile-events-open");
+      document.body.classList.remove("mobile-detail-tab");
+      document.getElementById("termPopover").hidden = true;
+      map.closePopup();
+      map.fitBounds(imageBounds, { padding: [18, 18], animate });
+      selectEvent(majorEvents[0].id, { fly: false, openPopup: false });
     }
 
     function showTermInfo(term) {
