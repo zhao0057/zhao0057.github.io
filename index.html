@@ -252,6 +252,29 @@
       background: rgba(215, 181, 109, 0.18);
     }
 
+    .term-related {
+      margin-top: 12px;
+    }
+
+    .term-related:empty {
+      display: none;
+    }
+
+    .term-related-label {
+      color: #c8b58d;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .term-related-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 7px;
+    }
+
     .mobile-toolbar {
       display: none;
     }
@@ -1184,12 +1207,37 @@
       .term-popover {
         left: 8px;
         right: 8px;
-        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(66px + env(safe-area-inset-bottom, 0px));
         z-index: 950;
         width: calc(100vw - 16px);
-        max-height: min(54vh, 460px);
+        max-height: min(48vh, 430px);
         overflow: auto;
         border-radius: 14px;
+      }
+
+      body.mobile-events-open .term-popover {
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        max-height: min(42vh, 360px);
+      }
+
+      .term-title {
+        font-size: 1.18rem;
+      }
+
+      .term-body {
+        font-size: 0.94rem;
+        line-height: 1.34;
+      }
+
+      .term-action {
+        min-height: 34px;
+        padding: 7px 11px 8px;
+      }
+
+      .term-close {
+        width: 34px;
+        height: 34px;
+        line-height: 30px;
       }
 
       .castle-marker {
@@ -1262,6 +1310,7 @@
         <button id="termFocusMap" class="term-action" type="button" hidden>定位地图</button>
         <button id="termFocusEvent" class="term-action" type="button" hidden>查看事件</button>
       </div>
+      <div id="termRelated" class="term-related"></div>
     </aside>
   </main>
 
@@ -2885,11 +2934,19 @@
 
     function setupTermInteractions() {
       document.addEventListener("click", (event) => {
-        const termButton = event.target.closest("[data-term]");
+        const termButton = event.target.closest("[data-term], [data-related-term]");
         if (!termButton) return;
         event.preventDefault();
         event.stopPropagation();
-        showTermInfo(decodeURIComponent(termButton.dataset.term));
+        const encodedTerm = termButton.dataset.term || termButton.dataset.relatedTerm;
+        showTermInfo(decodeURIComponent(encodedTerm));
+      });
+
+      document.addEventListener("click", (event) => {
+        const termPopover = document.getElementById("termPopover");
+        if (termPopover.hidden || !isMobileViewport()) return;
+        if (event.target.closest("#termPopover") || event.target.closest("[data-term], [data-related-term]")) return;
+        termPopover.hidden = true;
       });
 
       document.getElementById("termClose").addEventListener("click", () => {
@@ -2956,6 +3013,7 @@
       map.on("dragstart click", () => {
         if (isMobileViewport()) {
           document.body.classList.remove("mobile-events-open");
+          document.getElementById("termPopover").hidden = true;
         }
       });
     }
@@ -2984,16 +3042,88 @@
       const mapButton = document.getElementById("termFocusMap");
       mapButton.hidden = !entry.coord;
       mapButton.onclick = entry.coord ? () => {
+        document.getElementById("termPopover").hidden = true;
+        if (isMobileViewport()) {
+          document.body.classList.remove("mobile-events-open");
+        }
         map.flyTo(entry.coord, Math.max(map.getZoom(), 0.05), { duration: 0.75, easeLinearity: 0.25 });
       } : null;
 
       const eventButton = document.getElementById("termFocusEvent");
       eventButton.hidden = !entry.eventId;
       eventButton.onclick = entry.eventId ? () => {
+        document.getElementById("termPopover").hidden = true;
         selectEvent(entry.eventId, { fly: true, openPopup: true });
+        if (isMobileViewport()) {
+          openMobileEvents("detail");
+        }
       } : null;
 
+      renderTermRelated(term, entry);
       document.getElementById("termPopover").hidden = false;
+    }
+
+    function renderTermRelated(term, entry) {
+      const related = getRelatedTerms(term, entry);
+      const container = document.getElementById("termRelated");
+      container.innerHTML = related.length ? `
+        <div class="term-related-label">相关词条</div>
+        <div class="term-related-list">
+          ${related.map((item) => `
+            <button class="term-action" type="button" data-related-term="${encodeURIComponent(item)}">${escapeHtml(item)}</button>
+          `).join("")}
+        </div>
+      ` : "";
+    }
+
+    function getRelatedTerms(term, entry) {
+      const seen = new Set([term, entry.title]);
+      const related = [];
+      const addTerm = (candidate) => {
+        if (!candidate || seen.has(candidate) || !termRegistry[candidate]) return;
+        seen.add(candidate);
+        related.push(candidate);
+      };
+
+      const scanText = (text) => {
+        const raw = String(text ?? "");
+        linkableTerms.forEach((candidate) => {
+          if (raw.includes(candidate)) addTerm(candidate);
+        });
+      };
+
+      scanText(`${entry.title || ""} ${entry.type || ""} ${entry.description || ""}`);
+
+      const characterId = Object.entries(characters).find(([, person]) => {
+        return person.name === entry.title || person.name === term || person.name.startsWith(term);
+      })?.[0];
+
+      if (characterId) {
+        getEventsForCharacter(characterId).slice(0, 6).forEach((event) => {
+          addTerm(event.title);
+          addTerm(event.place);
+          addTerm(event.category);
+        });
+      }
+
+      if (entry.eventId) {
+        const event = majorEvents.find((item) => item.id === entry.eventId);
+        if (event) {
+          addTerm(event.place);
+          addTerm(event.category);
+          getEventCharacters(event).forEach((person) => addTerm(person.name));
+          scanText(`${event.title} ${event.time} ${event.place} ${event.related} ${event.summary} ${event.impact}`);
+        }
+      }
+
+      if (entry.coord) {
+        majorEvents
+          .filter((event) => sameCoord(event.coord, entry.coord))
+          .slice(0, 4)
+          .forEach((event) => addTerm(event.title));
+      }
+
+      return related.slice(0, 8);
     }
 
     function renderEventList() {
