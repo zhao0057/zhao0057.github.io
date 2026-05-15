@@ -3353,7 +3353,10 @@
 
       const index = samePlaceEvents.findIndex((item) => item.id === event.id);
       const angle = (Math.PI * 2 * index) / samePlaceEvents.length - Math.PI / 2;
-      const radius = Math.min(34, 10 + samePlaceEvents.length * 3);
+      // 事件点需要保留一点点错开以便点击，但不能离开底图地名太远。
+      // 手机近景会放大 CRS.Simple 的像素偏移，因此移动端用更小半径。
+      const maxRadius = isMobileViewport() ? 8 : 14;
+      const radius = Math.min(maxRadius, 3 + samePlaceEvents.length * 1.2);
 
       return [
         event.coord[0] + Math.sin(angle) * radius,
