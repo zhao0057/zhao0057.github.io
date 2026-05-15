@@ -752,6 +752,10 @@
     @media (max-width: 760px) {
       body {
         touch-action: manipulation;
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
       }
 
       .title-card {
@@ -782,7 +786,7 @@
       }
 
       .mobile-toolbar {
-        position: absolute;
+        position: fixed;
         left: 12px;
         right: 12px;
         bottom: calc(12px + env(safe-area-inset-bottom, 0px));
@@ -813,7 +817,7 @@
       }
 
       .mobile-current-event {
-        position: absolute;
+        position: fixed;
         left: 12px;
         right: 12px;
         bottom: calc(64px + env(safe-area-inset-bottom, 0px));
@@ -868,6 +872,7 @@
       }
 
       .event-panel {
+        position: fixed;
         top: auto;
         left: 8px;
         right: 8px;
@@ -878,13 +883,18 @@
         max-height: none;
         border-radius: 14px;
         grid-template-rows: auto auto minmax(0, 1fr);
-        transform: translateY(calc(100% + 152px));
-        transition: transform 220ms ease;
+        transform: translate3d(0, calc(100% + 28px), 0);
+        opacity: 0;
+        visibility: hidden;
+        transition: transform 220ms ease, opacity 160ms ease, visibility 0s linear 220ms;
         pointer-events: none;
       }
 
       body.mobile-events-open .event-panel {
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+        visibility: visible;
+        transition: transform 220ms ease, opacity 160ms ease;
         pointer-events: auto;
       }
 
@@ -2763,12 +2773,14 @@
 
     function resetAppState(options = {}) {
       const animate = options.animate === true;
+      window.scrollTo?.(0, 0);
       document.body.classList.remove("mobile-events-open");
       document.body.classList.remove("mobile-detail-tab");
       document.getElementById("termPopover").hidden = true;
       map.closePopup();
       map.fitBounds(imageBounds, { padding: [18, 18], animate });
       selectEvent(majorEvents[0].id, { fly: false, openPopup: false });
+      requestAnimationFrame?.(() => window.scrollTo?.(0, 0));
     }
 
     function showTermInfo(term) {
