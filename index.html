@@ -2467,7 +2467,7 @@
     }
 
     function inferEventPlaceKey(event) {
-      const haystack = `${event.title} ${event.place} ${event.summary} ${event.impact}`;
+      const haystack = `${event.title} ${event.place}`;
       const explicitRules = [
         ["fieldOfFire", ["怒火燎原", "河湾地北部平原"]],
         ["harrenhal", ["赫伦堡大议会", "赫伦堡比武", "赫伦堡焚毁"]],
@@ -2508,7 +2508,7 @@
         return place.aliases.some((alias) => haystack.includes(alias));
       });
 
-      return matchedPlace?.[0] || "kingsLanding";
+      return matchedPlace?.[0] || null;
     }
 
     function buildTermRegistry() {
@@ -2532,27 +2532,25 @@
         });
       });
 
-      castles.forEach((castle) => {
-        const house = houses[castle.houseId];
-        upsertTerm(castle.name, {
-          type: "城堡 / 地点",
-          coord: castle.coord,
-          description: `${castle.name}是${house.name}势力在地图上的关键据点。点击“定位地图”可以把视野移动到该城堡附近。`
-        });
-      });
-
-      Object.values(placeCoords).forEach((place) => {
+      getMapPlaceEntries().forEach((place) => {
+        const events = getEventsForPlaceEntry(place);
+        const eventText = getPlaceEventText(events);
+        const baseDescription = `${place.name}是当前中文底图上标注的${place.typeLabel}。${eventText}`;
         upsertTerm(place.name, {
-          type: "地点",
+          title: place.name,
+          type: place.typeLabel,
           coord: place.coord,
-          description: `${place.name}是当前中文底图坐标库中的地点，用于把历史事件精确对应到地图位置。`
+          eventId: events[0]?.id,
+          description: baseDescription
         });
+
         place.aliases.forEach((alias) => {
           upsertTerm(alias, {
             title: place.name,
-            type: "地点",
+            type: place.typeLabel,
             coord: place.coord,
-            description: `${alias}对应地图地点“${place.name}”，用于事件定位和地理索引。`
+            eventId: events[0]?.id,
+            description: `${alias}对应地图地点“${place.name}”。${eventText}`
           });
         });
       });
@@ -2644,7 +2642,112 @@
         upsertTerm(term, { type, description });
       });
 
+      getMapPlaceEntries().forEach((place) => {
+        const events = getEventsForPlaceEntry(place);
+        const eventText = getPlaceEventText(events);
+        const current = registry[place.name];
+        upsertTerm(place.name, {
+          title: place.name,
+          type: current?.type || place.typeLabel,
+          coord: current?.coord || place.coord,
+          eventId: current?.eventId || events[0]?.id,
+          description: appendPlaceEventText(current?.description, eventText)
+        });
+
+        place.aliases.forEach((alias) => {
+          const aliasCurrent = registry[alias];
+          upsertTerm(alias, {
+            title: place.name,
+            type: aliasCurrent?.type || place.typeLabel,
+            coord: aliasCurrent?.coord || place.coord,
+            eventId: aliasCurrent?.eventId || events[0]?.id,
+            description: appendPlaceEventText(aliasCurrent?.description, eventText)
+          });
+        });
+      });
+
       return registry;
+    }
+
+    function getMapPlaceEntries() {
+      const entries = new Map();
+      const upsertPlace = ({ key, name, coord, aliases = [], typeLabel = "地点" }) => {
+        if (!name) return;
+        const existing = entries.get(name) || { key, name, coord, aliases: [], typeLabel };
+        existing.key = existing.key || key;
+        existing.coord = existing.coord || coord;
+        existing.typeLabel = getPreferredPlaceType(existing.typeLabel, typeLabel);
+        existing.aliases = [...new Set([...existing.aliases, ...aliases].filter((alias) => alias && alias !== name))];
+        entries.set(name, existing);
+      };
+
+      Object.entries(placeCoords).forEach(([key, place]) => {
+        upsertPlace({
+          key,
+          name: place.name,
+          coord: place.coord,
+          aliases: place.aliases,
+          typeLabel: "地点"
+        });
+      });
+
+      castles.forEach((castle) => {
+        upsertPlace({
+          key: castle.placeKey,
+          name: castle.name,
+          coord: castle.coord,
+          aliases: [],
+          typeLabel: "城堡 / 地点"
+        });
+      });
+
+      mapLabels.forEach((label) => {
+        upsertPlace({
+          key: Object.entries(placeCoords).find(([, place]) => place.name === label.text)?.[0],
+          name: label.text,
+          coord: label.coord,
+          aliases: [],
+          typeLabel: getMapLabelType(label.type)
+        });
+      });
+
+      return [...entries.values()];
+    }
+
+    function getMapLabelType(type) {
+      if (type === "region") return "区域 / 地点";
+      if (type === "sea") return "海域 / 地点";
+      return "地点";
+    }
+
+    function getPreferredPlaceType(currentType, nextType) {
+      if (currentType === "城堡 / 地点" || nextType === "城堡 / 地点") return "城堡 / 地点";
+      if (currentType === "区域 / 地点" || nextType === "区域 / 地点") return "区域 / 地点";
+      if (currentType === "海域 / 地点" || nextType === "海域 / 地点") return "海域 / 地点";
+      return nextType || currentType || "地点";
+    }
+
+    function getEventsForPlaceEntry(place) {
+      const names = [place.name, ...place.aliases].filter(Boolean);
+      return majorEvents.filter((event) => {
+        if (place.key && event.locationKey === place.key) return true;
+        if (place.coord && sameCoord(event.coord, place.coord)) return true;
+        const haystack = `${event.title} ${event.place}`;
+        return names.some((name) => haystack.includes(name));
+      });
+    }
+
+    function getPlaceEventText(events) {
+      if (!events.length) return "当前事件库暂无直接发生在这里的事件。";
+      const titles = events.map((event) => event.title).join("、");
+      return `这里关联的事件：${titles}。`;
+    }
+
+    function appendPlaceEventText(description, eventText) {
+      const base = description || "";
+      if (!base) return eventText;
+      if (base.includes("这里关联的事件：") || base.includes("当前事件库暂无直接发生在这里的事件。")) return base;
+      return `${base} ${eventText}`;
     }
 
     function escapeHtml(value) {
