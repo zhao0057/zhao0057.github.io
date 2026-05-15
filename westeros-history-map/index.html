@@ -1,0 +1,3533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>维斯特洛大陆互动地图</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:wght@500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --ink: #f4e8cf;
+      --muted: #c8b58d;
+      --gold: #d7b56d;
+      --panel: rgba(15, 12, 9, 0.78);
+      --line: rgba(215, 181, 109, 0.32);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #071014;
+      color: var(--ink);
+      font-family: "EB Garamond", Georgia, serif;
+    }
+
+    #app,
+    #map {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .leaflet-container {
+      background:
+        radial-gradient(circle at 50% 45%, rgba(51, 78, 88, 0.3), transparent 42%),
+        linear-gradient(135deg, #071014, #152126 48%, #06090b);
+      font-family: "EB Garamond", Georgia, serif;
+    }
+
+    .leaflet-image-layer.realistic-map {
+      image-rendering: auto;
+      transform: translateZ(0);
+      filter: saturate(1.06) contrast(1.04);
+      will-change: transform;
+    }
+
+    .leaflet-control-zoom {
+      border: 1px solid var(--line) !important;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+    }
+
+    .leaflet-control-zoom a {
+      width: 36px;
+      height: 36px;
+      border-color: rgba(215, 181, 109, 0.18) !important;
+      background: rgba(16, 12, 9, 0.88) !important;
+      color: var(--ink) !important;
+      line-height: 35px;
+    }
+
+    .leaflet-control-attribution {
+      display: none;
+    }
+
+    .map-vignette {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      z-index: 500;
+      background:
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.34), transparent 18%, transparent 78%, rgba(0, 0, 0, 0.52)),
+        linear-gradient(to right, rgba(0, 0, 0, 0.42), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.36));
+    }
+
+    .title-card {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 800;
+      width: min(380px, calc(100vw - 36px));
+      padding: 14px 16px 13px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background:
+        linear-gradient(180deg, rgba(41, 30, 21, 0.78), rgba(11, 9, 7, 0.76)),
+        var(--panel);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36);
+      backdrop-filter: blur(10px) saturate(0.9);
+    }
+
+    .title-card h1 {
+      margin: 0;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: clamp(1.65rem, 4vw, 2.55rem);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .title-card p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .legend-card {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      z-index: 800;
+      width: min(310px, calc(100vw - 36px));
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(13, 10, 8, 0.74);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+      backdrop-filter: blur(10px);
+    }
+
+    .event-panel {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      z-index: 820;
+      display: grid;
+      grid-template-rows: auto minmax(130px, 1fr) auto;
+      width: min(390px, calc(100vw - 36px));
+      max-height: calc(100vh - 36px);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background:
+        linear-gradient(180deg, rgba(41, 30, 21, 0.82), rgba(10, 8, 6, 0.8)),
+        var(--panel);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(11px) saturate(0.92);
+      overflow: hidden;
+    }
+
+    .term-link {
+      display: inline;
+      margin: 0;
+      padding: 0 1px;
+      border: 0;
+      border-bottom: 1px dotted rgba(242, 213, 140, 0.72);
+      background: transparent;
+      color: #f5d98f;
+      font: inherit;
+      line-height: inherit;
+      text-align: inherit;
+      text-shadow: inherit;
+      cursor: help;
+    }
+
+    .term-link:hover,
+    .term-link:focus-visible {
+      color: #fff0bc;
+      outline: none;
+      border-bottom-color: #fff0bc;
+      background: rgba(215, 181, 109, 0.12);
+    }
+
+    .term-popover {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      z-index: 900;
+      width: min(390px, calc(100vw - 36px));
+      padding: 14px 15px 15px;
+      border: 1px solid rgba(242, 213, 140, 0.38);
+      border-radius: 7px;
+      background:
+        linear-gradient(180deg, rgba(42, 31, 22, 0.92), rgba(10, 8, 6, 0.9)),
+        rgba(15, 12, 9, 0.9);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(12px) saturate(0.95);
+    }
+
+    .term-popover[hidden] {
+      display: none;
+    }
+
+    .term-close {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(215, 181, 109, 0.24);
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.22);
+      color: #f0dfb5;
+      font-size: 20px;
+      line-height: 24px;
+      cursor: pointer;
+    }
+
+    .term-kicker {
+      color: #c8b58d;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 0.76rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .term-title {
+      margin: 5px 34px 0 0;
+      color: #f2d58c;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 1.34rem;
+      line-height: 1.04;
+    }
+
+    .term-body {
+      margin: 10px 0 0;
+      color: #eadfc6;
+      font-size: 0.98rem;
+      line-height: 1.36;
+    }
+
+    .term-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .term-action {
+      border: 1px solid rgba(215, 181, 109, 0.36);
+      border-radius: 999px;
+      background: rgba(215, 181, 109, 0.1);
+      color: #f5e8c8;
+      padding: 5px 10px 6px;
+      font-size: 0.86rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .term-action:hover {
+      border-color: rgba(242, 213, 140, 0.74);
+      background: rgba(215, 181, 109, 0.18);
+    }
+
+    .term-related {
+      margin-top: 12px;
+    }
+
+    .term-related:empty {
+      display: none;
+    }
+
+    .term-related-label {
+      color: #c8b58d;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .term-related-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 7px;
+    }
+
+    .mobile-toolbar {
+      display: none;
+    }
+
+    .mobile-current-event,
+    .mobile-sheet-tabs,
+    .mobile-close-events {
+      display: none;
+    }
+
+    .event-header {
+      padding: 13px 14px 10px;
+      border-bottom: 1px solid rgba(215, 181, 109, 0.18);
+    }
+
+    .event-header strong {
+      display: block;
+      color: #f2d58c;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 0.86rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .event-header span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.25;
+    }
+
+    .event-list {
+      overflow: auto;
+      padding: 8px;
+      scrollbar-color: rgba(215, 181, 109, 0.38) rgba(0, 0, 0, 0.2);
+      scrollbar-width: thin;
+    }
+
+    .event-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 5px 10px;
+      width: 100%;
+      margin: 0 0 6px;
+      padding: 8px 9px;
+      border: 1px solid rgba(215, 181, 109, 0.14);
+      border-radius: 5px;
+      background: rgba(0, 0, 0, 0.16);
+      color: #eadfc6;
+      text-align: left;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+      cursor: pointer;
+    }
+
+    .event-item:hover,
+    .event-item.active {
+      border-color: rgba(242, 213, 140, 0.7);
+      background: rgba(215, 181, 109, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .event-item-title {
+      overflow: hidden;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .event-item-time {
+      color: #f2d58c;
+      font-size: 0.84rem;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .event-item-place,
+    .event-item-category {
+      color: #bfae84;
+      font-size: 0.82rem;
+      line-height: 1.1;
+    }
+
+    .event-item-category {
+      text-align: right;
+    }
+
+    .event-detail {
+      padding: 12px 14px 14px;
+      border-top: 1px solid rgba(215, 181, 109, 0.18);
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    .event-detail h2 {
+      margin: 0;
+      color: #f2d58c;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 1.15rem;
+      line-height: 1.08;
+    }
+
+    .event-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 10px;
+      margin-top: 9px;
+      color: #dccdad;
+      font-size: 0.9rem;
+      line-height: 1.18;
+    }
+
+    .event-meta span {
+      color: #a99568;
+    }
+
+    .event-detail p {
+      margin: 9px 0 0;
+      color: #eaddbf;
+      font-size: 0.96rem;
+      line-height: 1.32;
+    }
+
+    .event-impact {
+      margin-top: 9px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(215, 181, 109, 0.14);
+      color: #cbb98f;
+      font-size: 0.92rem;
+      line-height: 1.25;
+    }
+
+    .event-marker {
+      width: 18px !important;
+      height: 18px !important;
+      margin-left: -9px !important;
+      margin-top: -9px !important;
+    }
+
+    .event-token {
+      position: relative;
+      width: 14px;
+      height: 14px;
+      margin: 2px;
+      border: 1px solid rgba(255, 244, 196, 0.96);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #fff9d8 0 18%, transparent 20%),
+        linear-gradient(135deg, var(--event-light), var(--event-color));
+      box-shadow:
+        0 0 0 2px rgba(17, 12, 8, 0.72),
+        0 0 11px rgba(255, 218, 112, 0.72),
+        0 4px 7px rgba(0, 0, 0, 0.42);
+    }
+
+    .event-token::after {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border: 1px solid rgba(255, 218, 112, 0.28);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .event-token::before {
+      content: none;
+    }
+
+    .event-marker.active .event-token {
+      animation: eventPulse 1.25s ease-in-out infinite;
+    }
+
+    @keyframes eventPulse {
+      0% { box-shadow: 0 0 0 2px rgba(17, 12, 8, 0.72), 0 0 9px rgba(255, 218, 112, 0.62), 0 4px 7px rgba(0, 0, 0, 0.42); }
+      60% { box-shadow: 0 0 0 8px rgba(255, 218, 112, 0), 0 0 18px rgba(255, 218, 112, 0.9), 0 4px 7px rgba(0, 0, 0, 0.42); }
+      100% { box-shadow: 0 0 0 2px rgba(17, 12, 8, 0.72), 0 0 9px rgba(255, 218, 112, 0.62), 0 4px 7px rgba(0, 0, 0, 0.42); }
+    }
+
+    .legend-card strong {
+      display: block;
+      margin-bottom: 7px;
+      color: #f2d58c;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 10px;
+      color: #e9dcc0;
+      font-size: 0.95rem;
+      line-height: 1.15;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .legend-swatch {
+      flex: 0 0 auto;
+      width: 12px;
+      height: 12px;
+      border: 1px solid rgba(255, 239, 196, 0.72);
+      border-radius: 50%;
+      background: var(--house-color);
+      box-shadow: 0 0 10px var(--house-color);
+    }
+
+    .castle-marker {
+      width: 76px !important;
+      height: 72px !important;
+      margin-left: -38px !important;
+      margin-top: -58px !important;
+      text-align: center;
+    }
+
+    .castle-icon {
+      position: relative;
+      width: 34px;
+      height: 44px;
+      margin: 0 auto;
+      border: 1px solid rgba(249, 229, 180, 0.9);
+      border-radius: 4px 4px 15px 15px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 35%),
+        linear-gradient(180deg, var(--house-light), var(--house-color));
+      box-shadow:
+        0 3px 0 rgba(59, 31, 15, 0.82),
+        0 12px 22px rgba(0, 0, 0, 0.46),
+        0 0 0 2px rgba(31, 18, 9, 0.62);
+    }
+
+    .castle-icon::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -9px;
+      width: 41px;
+      height: 7px;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: linear-gradient(90deg, #4e2b14, #f0ce87 45%, #3a1e10);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.42);
+    }
+
+    .castle-icon::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border: 1px solid rgba(255, 242, 206, 0.36);
+      border-radius: 3px 3px 11px 11px;
+    }
+
+    .castle-crest {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+      color: var(--crest-color);
+      font-family: "Cinzel", "EB Garamond", Georgia, serif;
+      font-size: 17px;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    }
+
+    .castle-label {
+      display: inline-block;
+      min-width: 64px;
+      margin-top: 4px;
+      padding: 1px 5px 2px;
+      border: 1px solid rgba(215, 181, 109, 0.24);
+      border-radius: 4px;
+      background: rgba(11, 8, 6, 0.66);
+      color: #f5e8c8;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.12;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.86);
+      white-space: nowrap;
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      border: 1px solid rgba(215, 181, 109, 0.34);
+      background: rgba(17, 12, 8, 0.94);
+      color: var(--ink);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.4);
+    }
+
+    .leaflet-popup-content {
+      margin: 11px 13px;
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .leaflet-popup-content b {
+      color: #f2d58c;
+      font-family: "Cinzel", Georgia, serif;
+    }
+
+    .map-label {
+      width: 120px !important;
+      margin-left: -60px !important;
+      margin-top: -12px !important;
+      padding: 2px 8px 3px;
+      border-radius: 4px;
+      background: rgba(10, 15, 14, 0.34);
+      color: #f0dfb5;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.05;
+      text-align: center;
+      text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.9),
+        0 0 5px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 0 10px rgba(13, 11, 7, 0.28);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .map-label.region {
+      width: 150px !important;
+      margin-left: -75px !important;
+      color: #f5e3af;
+      font-family: "Cinzel", "EB Garamond", Georgia, serif;
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(19, 17, 11, 0.28);
+    }
+
+    .map-label.sea {
+      width: 170px !important;
+      margin-left: -85px !important;
+      color: rgba(227, 212, 169, 0.72);
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 17px;
+      letter-spacing: 0.18em;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .map-label.small {
+      width: 92px !important;
+      margin-left: -46px !important;
+      font-size: 12px;
+    }
+
+    .avatar-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .avatar {
+      position: relative;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(242, 213, 140, 0.6);
+      border-radius: 50%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 35% 28%, rgba(255, 241, 198, 0.32), transparent 32%),
+        linear-gradient(135deg, #4b3420, #17100b);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      color: #f2d58c;
+      font-size: 0;
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .avatar-fallback {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .avatar-name {
+      align-self: center;
+      max-width: 118px;
+      color: #d7c59e;
+      font-size: 0.86rem;
+      line-height: 1.05;
+    }
+
+    .popup-avatars {
+      display: flex;
+      gap: 4px;
+      margin-top: 7px;
+    }
+
+    .popup-avatars .avatar {
+      width: 28px;
+      height: 28px;
+    }
+
+    .demo-caption {
+      pointer-events: none;
+      position: absolute;
+      left: 50%;
+      bottom: 28px;
+      z-index: 920;
+      max-width: min(760px, calc(100vw - 48px));
+      padding: 12px 18px 13px;
+      transform: translateX(-50%);
+      border: 1px solid rgba(242, 213, 140, 0.62);
+      border-radius: 999px;
+      background: rgba(12, 9, 7, 0.82);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
+      color: #f8ead0;
+      font-size: clamp(1.02rem, 2vw, 1.28rem);
+      font-weight: 700;
+      line-height: 1.1;
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .demo-cursor {
+      pointer-events: none;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      z-index: 940;
+      width: 24px;
+      height: 24px;
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(255, 243, 204, 0.96);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(244, 193, 80, 0.92) 0 22%, rgba(244, 193, 80, 0.34) 24% 48%, transparent 50%);
+      box-shadow: 0 0 0 4px rgba(11, 8, 6, 0.46), 0 0 24px rgba(244, 193, 80, 0.75);
+      opacity: 0;
+      transition: left 720ms ease, top 720ms ease, opacity 220ms ease;
+    }
+
+    .demo-cursor.clicking {
+      animation: demoClick 420ms ease;
+    }
+
+    .demo-focus-ring {
+      position: relative;
+      z-index: 1;
+      border-color: rgba(255, 230, 152, 0.95) !important;
+      box-shadow: 0 0 0 2px rgba(255, 221, 118, 0.18), 0 0 24px rgba(255, 221, 118, 0.26) !important;
+    }
+
+    @keyframes demoClick {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      52% { transform: translate(-50%, -50%) scale(0.72); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        touch-action: manipulation;
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+
+      .title-card {
+        top: 12px;
+        left: 12px;
+        width: calc(100vw - 24px);
+        padding: 10px 12px;
+        border-radius: 10px;
+      }
+
+      .title-card h1 {
+        font-size: 1.42rem;
+      }
+
+      .title-card p {
+        margin-top: 5px;
+        font-size: 0.88rem;
+        line-height: 1.22;
+      }
+
+      .leaflet-control-zoom {
+        margin-top: 104px !important;
+        margin-right: 12px !important;
+      }
+
+      .legend-card {
+        display: none;
+      }
+
+      .mobile-toolbar {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        z-index: 910;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        pointer-events: auto;
+      }
+
+      .mobile-action {
+        min-height: 42px;
+        border: 1px solid rgba(215, 181, 109, 0.42);
+        border-radius: 999px;
+        background: rgba(12, 9, 7, 0.84);
+        color: #f5e8c8;
+        font-size: 0.98rem;
+        font-weight: 700;
+        line-height: 1;
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.34);
+        backdrop-filter: blur(10px);
+      }
+
+      .mobile-action:active,
+      .mobile-current-event:active,
+      .mobile-tab:active {
+        transform: scale(0.98);
+      }
+
+      .mobile-current-event {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+        z-index: 905;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        padding: 7px 11px;
+        border: 1px solid rgba(215, 181, 109, 0.36);
+        border-radius: 12px;
+        background: rgba(12, 9, 7, 0.78);
+        color: #f5e8c8;
+        text-align: left;
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.32);
+        backdrop-filter: blur(10px);
+      }
+
+      body.mobile-events-open .mobile-current-event {
+        display: none;
+      }
+
+      body.mobile-events-open .mobile-toolbar {
+        display: none;
+      }
+
+      .mobile-current-kicker {
+        display: block;
+        color: #c8b58d;
+        font-size: 0.72rem;
+        line-height: 1;
+      }
+
+      .mobile-current-title {
+        display: block;
+        overflow: hidden;
+        margin-top: 3px;
+        color: #f2d58c;
+        font-size: 0.96rem;
+        font-weight: 700;
+        line-height: 1.05;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .mobile-current-event::after {
+        content: "详情";
+        color: #f5e8c8;
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+
+      .event-panel {
+        position: fixed;
+        top: auto;
+        left: 8px;
+        right: 8px;
+        bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        z-index: 940;
+        width: calc(100vw - 16px);
+        height: min(68vh, 580px);
+        max-height: none;
+        border-radius: 14px;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        transform: translate3d(0, calc(100% + 28px), 0);
+        opacity: 0;
+        visibility: hidden;
+        transition: transform 220ms ease, opacity 160ms ease, visibility 0s linear 220ms;
+        pointer-events: none;
+      }
+
+      body.mobile-events-open .event-panel {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+        visibility: visible;
+        transition: transform 220ms ease, opacity 160ms ease;
+        pointer-events: auto;
+      }
+
+      .event-header {
+        position: relative;
+        padding: 20px 48px 10px 14px;
+      }
+
+      .event-header::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 8px;
+        width: 42px;
+        height: 4px;
+        transform: translateX(-50%);
+        border-radius: 999px;
+        background: rgba(215, 181, 109, 0.42);
+      }
+
+      .event-header::after {
+        content: none;
+      }
+
+      .mobile-close-events {
+        position: absolute;
+        top: 14px;
+        right: 12px;
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid rgba(215, 181, 109, 0.28);
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.22);
+        color: #f0dfb5;
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .mobile-sheet-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 8px 10px;
+        border-bottom: 1px solid rgba(215, 181, 109, 0.16);
+      }
+
+      .mobile-tab {
+        min-height: 36px;
+        border: 1px solid rgba(215, 181, 109, 0.26);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.18);
+        color: #d7c59e;
+        font-size: 0.92rem;
+        font-weight: 700;
+      }
+
+      body.mobile-detail-tab .mobile-tab[data-mobile-tab="detail"],
+      body:not(.mobile-detail-tab) .mobile-tab[data-mobile-tab="list"] {
+        border-color: rgba(242, 213, 140, 0.72);
+        background: rgba(215, 181, 109, 0.14);
+        color: #f5e8c8;
+      }
+
+      .event-list {
+        padding: 8px 8px 4px;
+      }
+
+      body.mobile-detail-tab .event-list {
+        display: none;
+      }
+
+      body:not(.mobile-detail-tab) .event-detail {
+        display: none;
+      }
+
+      .event-detail {
+        overflow: auto;
+        border-top: 0;
+      }
+
+      .legend-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .term-popover {
+        left: 8px;
+        right: 8px;
+        bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+        z-index: 950;
+        width: calc(100vw - 16px);
+        max-height: min(48vh, 430px);
+        overflow: auto;
+        border-radius: 14px;
+      }
+
+      body.mobile-events-open .term-popover {
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        max-height: min(42vh, 360px);
+      }
+
+      .term-title {
+        font-size: 1.18rem;
+      }
+
+      .term-body {
+        font-size: 0.94rem;
+        line-height: 1.34;
+      }
+
+      .term-action {
+        min-height: 34px;
+        padding: 7px 11px 8px;
+      }
+
+      .term-close {
+        width: 34px;
+        height: 34px;
+        line-height: 30px;
+      }
+
+      .castle-marker {
+        transform: scale(0.86);
+      }
+
+      .event-marker {
+        transform: scale(1.18);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main id="app">
+    <div id="map" aria-label="维斯特洛大陆互动地图"></div>
+    <div class="map-vignette"></div>
+
+    <section class="title-card">
+      <h1>维斯特洛大陆</h1>
+      <p>基于中文高分辨率静态地图的 Leaflet ImageOverlay。点击城堡、事件或金色专有名词查看信息。</p>
+    </section>
+
+    <nav class="mobile-toolbar" aria-label="手机地图操作">
+      <button id="mobileEventsToggle" class="mobile-action" type="button">事件列表</button>
+      <button id="mobileDetailToggle" class="mobile-action" type="button">当前详情</button>
+      <button id="mobileResetView" class="mobile-action" type="button">全图</button>
+    </nav>
+
+    <button id="mobileCurrentEvent" class="mobile-current-event" type="button" aria-label="查看当前事件详情">
+      <span>
+        <span class="mobile-current-kicker">当前事件</span>
+        <span id="mobileCurrentTitle" class="mobile-current-title">伊耿登陆</span>
+      </span>
+    </button>
+
+    <aside class="legend-card">
+      <strong>Great Houses</strong>
+      <div id="legend" class="legend-grid"></div>
+    </aside>
+
+    <section class="event-panel" aria-label="维斯特洛重要事件列表">
+      <header class="event-header">
+        <button id="mobileCloseEvents" class="mobile-close-events" type="button" aria-label="关闭事件面板">×</button>
+        <strong>Major Events</strong>
+        <span>选择事件后，地图会定位到发生地，并显示时间、人物、影响和相关专有名词。</span>
+      </header>
+      <div class="mobile-sheet-tabs" role="tablist" aria-label="事件面板切换">
+        <button class="mobile-tab" type="button" data-mobile-tab="list">事件列表</button>
+        <button class="mobile-tab" type="button" data-mobile-tab="detail">当前详情</button>
+      </div>
+      <div id="eventList" class="event-list"></div>
+      <article id="eventDetail" class="event-detail"></article>
+    </section>
+
+    <aside id="termPopover" class="term-popover" hidden aria-live="polite">
+      <button id="termClose" class="term-close" type="button" aria-label="关闭词条">×</button>
+      <div id="termType" class="term-kicker"></div>
+      <h2 id="termTitle" class="term-title"></h2>
+      <p id="termBody" class="term-body"></p>
+      <div class="term-actions">
+        <button id="termFocusMap" class="term-action" type="button" hidden>定位地图</button>
+        <button id="termFocusEvent" class="term-action" type="button" hidden>查看事件</button>
+      </div>
+      <div id="termRelated" class="term-related"></div>
+    </aside>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // 高分辨率中文地图图片。项目路径发布时 HTML 在子目录，底图保留在 Pages 根目录。
+    const MAP_URL = window.location.pathname.includes("/westeros-history-map/")
+      ? "../Map_of_westeros_CN.jpg"
+      : "./Map_of_westeros_CN.jpg";
+    const MAP_SOURCE_URL = "D:/private/Map_of_westeros_CN.jpg";
+    const SHOW_TRANSLATION_LABELS = false;
+    const DEMO_MODE = new URLSearchParams(window.location.search).has("demo");
+
+    // 图片原始尺寸：1680 x 3200。CRS.Simple 下坐标不是经纬度，而是图片像素坐标。
+    const IMAGE_SIZE = {
+      width: 1680,
+      height: 3200
+    };
+
+    const imageBounds = [[0, 0], [IMAGE_SIZE.height, IMAGE_SIZE.width]];
+    const xy = (x, y) => [IMAGE_SIZE.height - y, x];
+
+    // 基于当前中文底图人工校准的地点坐标库。键名用于事件匹配，coord 为 Leaflet CRS.Simple 坐标。
+    const placeCoords = {
+      castleBlack: { name: "黑城堡", coord: xy(950, 360), aliases: ["黑城堡", "长城"] },
+      eastwatch: { name: "东海望", coord: xy(1132, 356), aliases: ["东海望"] },
+      hardhome: { name: "艰难屯", coord: xy(880, 110), aliases: ["艰难屯", "长城以北"] },
+      fistFirstMen: { name: "先民拳峰", coord: xy(905, 214), aliases: ["先民拳峰", "拳峰"] },
+      crastersKeep: { name: "卡斯特堡垒", coord: xy(1038, 264), aliases: ["卡斯特堡垒", "卡斯特的堡垒"] },
+      nightfort: { name: "长夜堡", coord: xy(812, 360), aliases: ["长夜堡"] },
+      queenscrown: { name: "后冠镇", coord: xy(842, 422), aliases: ["后冠镇", "王后冠"] },
+      winterfell: { name: "临冬城", coord: xy(782, 840), aliases: ["临冬城"] },
+      moatCailin: { name: "卡林湾", coord: xy(773, 1226), aliases: ["卡林湾", "颈泽"] },
+      whiteHarbor: { name: "白港", coord: xy(932, 1132), aliases: ["白港"] },
+      deepwoodMotte: { name: "深林堡", coord: xy(504, 1036), aliases: ["深林堡"] },
+      kingsroadNorth: { name: "国王大道北段", coord: xy(828, 1298), aliases: ["国王大道北段", "国王大道"] },
+      lastHearth: { name: "最后壁炉城", coord: xy(1138, 575), aliases: ["最后壁炉城"] },
+      karhold: { name: "卡霍城", coord: xy(1368, 612), aliases: ["卡霍城"] },
+      pyke: { name: "派克城", coord: xy(202, 1604), aliases: ["派克城", "铁群岛"] },
+      casterlyRock: { name: "凯岩城", coord: xy(224, 2176), aliases: ["凯岩城"] },
+      lannisport: { name: "兰尼斯港", coord: xy(214, 2222), aliases: ["兰尼斯港"] },
+      riverrun: { name: "奔流城", coord: xy(668, 1870), aliases: ["奔流城"] },
+      twins: { name: "孪河城", coord: xy(662, 1772), aliases: ["孪河城", "血色婚礼"] },
+      crossroadsInn: { name: "十字路口旅店", coord: xy(866, 1834), aliases: ["十字路口旅店", "十字路口"] },
+      whisperingWood: { name: "呓语森林", coord: xy(620, 1740), aliases: ["呓语森林", "奔流城附近"] },
+      greenFork: { name: "绿叉河", coord: xy(802, 1748), aliases: ["绿叉河"] },
+      stoneSept: { name: "石堂镇", coord: xy(690, 1908), aliases: ["石堂镇", "鸣钟之战"] },
+      harrenhal: { name: "赫伦堡", coord: xy(924, 1892), aliases: ["赫伦堡", "神眼湖", "神眼湖上空"] },
+      godsEye: { name: "神眼湖", coord: xy(924, 2032), aliases: ["神眼湖"] },
+      whitewalls: { name: "白墙城", coord: xy(660, 1944), aliases: ["白墙城"] },
+      kingsLanding: { name: "君临", coord: xy(1002, 2202), aliases: ["君临", "红堡", "贝勒大圣堂", "龙穴", "黑水河口"] },
+      blackwaterBay: { name: "黑水湾", coord: xy(1066, 2155), aliases: ["黑水湾", "黑水河之战"] },
+      duskendale: { name: "暮谷镇", coord: xy(1122, 2038), aliases: ["暮谷镇"] },
+      dragonstone: { name: "龙石岛", coord: xy(1338, 2047), aliases: ["龙石岛"] },
+      eyrie: { name: "鹰巢城", coord: xy(1212, 1672), aliases: ["鹰巢城", "谷地"] },
+      highgarden: { name: "高庭", coord: xy(474, 2810), aliases: ["高庭"] },
+      oldtown: { name: "旧镇", coord: xy(314, 3050), aliases: ["旧镇"] },
+      goldengrove: { name: "金树城", coord: [885, 490], aliases: ["金树城"] },
+      bitterbridge: { name: "苦桥", coord: [892, 760], aliases: ["苦桥"] },
+      grassyVale: { name: "绿谷城", coord: [872, 1120], aliases: ["绿谷城"] },
+      longtable: { name: "长桌堡", coord: [768, 705], aliases: ["长桌堡"] },
+      ciderHall: { name: "果酒厅", coord: [642, 598], aliases: ["果酒厅"] },
+      ashford: { name: "白杨滩", coord: [592, 835], aliases: ["白杨滩", "白杨镇"] },
+      blackhaven: { name: "黑港", coord: [505, 1172], aliases: ["黑港"] },
+      nightsong: { name: "夜歌城", coord: [350, 652], aliases: ["夜歌城"] },
+      hornHill: { name: "角陵", coord: [392, 405], aliases: ["角陵"] },
+      roseRoad: { name: "玫瑰大道", coord: [760, 540], aliases: ["玫瑰大道"] },
+      manderRiver: { name: "舟徒河", coord: [578, 736], aliases: ["舟徒河"] },
+      blueburnRiver: { name: "蓝布恩河", coord: [782, 930], aliases: ["蓝布恩河"] },
+      dornishMarches: { name: "多恩边疆地", coord: [498, 1010], aliases: ["多恩边疆地"] },
+      fieldOfFire: { name: "怒火燎原战场", coord: xy(612, 2368), aliases: ["怒火燎原", "河湾地北部平原"] },
+      redgrassField: { name: "红草原", coord: xy(792, 1952), aliases: ["红草原"] },
+      stormlandsCamp: { name: "风息堡外", coord: xy(1264, 2678), aliases: ["风息堡外营地"] },
+      stormsEnd: { name: "风息堡", coord: xy(1278, 2714), aliases: ["风息堡"] },
+      griffinsRoost: { name: "鹫巢堡", coord: xy(1308, 2542), aliases: ["鹫巢堡", "格里芬栖所"] },
+      summerhall: { name: "盛夏厅", coord: xy(1116, 2380), aliases: ["盛夏厅"] },
+      lootTrain: { name: "黑水河以西", coord: xy(866, 2078), aliases: ["黑水河以西", "战利品车队"] },
+      sunspear: { name: "阳戟城", coord: xy(1440, 2982), aliases: ["阳戟城"] },
+      greenblood: { name: "绿血河", coord: xy(1350, 2924), aliases: ["绿血河", "板条镇"] },
+      boneway: { name: "骨路", coord: xy(1048, 2464), aliases: ["骨路"] },
+      towerOfJoy: { name: "极乐塔", coord: xy(972, 2938), aliases: ["极乐塔", "多恩红色山脉"] },
+      dorne: { name: "多恩", coord: xy(840, 3000), aliases: ["多恩"] }
+    };
+
+    // 2026-05-14: 以当前中文底图重新校准的全图地名索引。这里覆盖早期粗坐标，
+    // 并补入底图上可读到的城堡、城镇、河流、道路、海湾、岛屿与区域。
+    Object.assign(placeCoords, {
+      landsOfAlwaysWinter: { name: "永冬之地", coord: xy(500, 48), aliases: ["永冬之地"], typeLabel: "区域 / 地点" },
+      frozenShore: { name: "冰封海岸", coord: xy(370, 360), aliases: ["冰封海岸"], typeLabel: "海岸 / 地点" },
+      shiveringSea: { name: "颤抖海", coord: xy(1510, 1010), aliases: ["颤抖海"], typeLabel: "海域 / 地点" },
+      bayOfIce: { name: "冰湾", coord: xy(608, 438), aliases: ["冰湾"], typeLabel: "海域 / 地点" },
+      frostfangs: { name: "霜雪之牙", coord: xy(764, 260), aliases: ["霜雪之牙"], typeLabel: "山脉 / 地点" },
+      howlRidge: { name: "风声峡", coord: xy(730, 184), aliases: ["风声峡"], typeLabel: "峡谷 / 地点" },
+      hauntedForest: { name: "鬼影森林", coord: xy(812, 124), aliases: ["鬼影森林"], typeLabel: "森林 / 地点" },
+      shadowTower: { name: "影子塔", coord: xy(864, 356), aliases: ["影子塔"] },
+      fistFirstMen: { name: "先民拳峰", coord: xy(870, 286), aliases: ["先民拳峰", "拳峰"] },
+      crastersKeep: { name: "卡斯特的堡垒", coord: xy(948, 294), aliases: ["卡斯特堡垒", "卡斯特的堡垒"] },
+      whitetree: { name: "白树村", coord: xy(1018, 348), aliases: ["白树村"] },
+      antlerRiver: { name: "鹿角河", coord: xy(1094, 282), aliases: ["鹿角河"], typeLabel: "河流 / 地点" },
+      storroldsPoint: { name: "斯托德之角", coord: xy(1238, 152), aliases: ["斯托德之角"], typeLabel: "海角 / 地点" },
+      hardhome: { name: "艰难屯", coord: xy(1210, 238), aliases: ["艰难屯", "长城以北"] },
+      skagos: { name: "斯卡格斯岛", coord: xy(1306, 510), aliases: ["斯卡格斯岛"], typeLabel: "岛屿 / 地点" },
+      newSkagos: { name: "新卡格斯岛", coord: xy(1396, 434), aliases: ["新卡格斯岛"], typeLabel: "岛屿 / 地点" },
+      castleBlack: { name: "黑城堡", coord: xy(956, 430), aliases: ["黑城堡", "长城"] },
+      nightfort: { name: "长夜堡", coord: xy(818, 390), aliases: ["长夜堡"] },
+      queenscrown: { name: "后冠镇", coord: xy(850, 502), aliases: ["后冠镇", "王后冠"] },
+      moleTown: { name: "鼹鼠村", coord: xy(984, 474), aliases: ["鼹鼠村"] },
+      eastwatch: { name: "东海望", coord: xy(1152, 392), aliases: ["东海望"] },
+      sealBay: { name: "海豹湾", coord: xy(1234, 420), aliases: ["海豹湾"], typeLabel: "海湾 / 地点" },
+      bearIsland: { name: "熊岛", coord: xy(522, 520), aliases: ["熊岛"], typeLabel: "岛屿 / 地点" },
+      seaDragonPoint: { name: "海龙角", coord: xy(336, 650), aliases: ["海龙角"], typeLabel: "海角 / 地点" },
+      deepwoodMotte: { name: "深林堡", coord: xy(572, 748), aliases: ["深林堡"] },
+      wolfswood: { name: "狼林", coord: xy(704, 730), aliases: ["狼林"], typeLabel: "森林 / 地点" },
+      longLake: { name: "长湖", coord: xy(846, 706), aliases: ["长湖"], typeLabel: "湖泊 / 地点" },
+      whiteKnifeRiver: { name: "白刃河", coord: xy(844, 806), aliases: ["白刃河"], typeLabel: "河流 / 地点" },
+      winterfell: { name: "临冬城", coord: xy(742, 884), aliases: ["临冬城"] },
+      torrhensSquare: { name: "托伦方城", coord: xy(620, 900), aliases: ["托伦方城"] },
+      barrowton: { name: "荒冢屯", coord: xy(520, 1090), aliases: ["荒冢屯"] },
+      rills: { name: "溪流地", coord: xy(344, 1085), aliases: ["溪流地"], typeLabel: "区域 / 地点" },
+      moatCailin: { name: "卡林湾", coord: xy(768, 1226), aliases: ["卡林湾", "颈泽"] },
+      ironwoodKeep: { name: "铁伍德堡", coord: xy(1004, 1028), aliases: ["铁伍德堡"] },
+      longtableNorth: { name: "朗门堡", coord: xy(1172, 1038), aliases: ["朗门堡"] },
+      widowsWatch: { name: "寡妇望", coord: xy(1268, 1138), aliases: ["寡妇望"] },
+      lastHearth: { name: "最后壁炉城", coord: xy(1080, 570), aliases: ["最后壁炉城"] },
+      lastRiver: { name: "末江", coord: xy(986, 658), aliases: ["末江"], typeLabel: "河流 / 地点" },
+      karhold: { name: "卡霍城", coord: xy(1340, 604), aliases: ["卡霍城"] },
+      greyCliffs: { name: "灰崖", coord: xy(1384, 594), aliases: ["灰崖"], typeLabel: "海岸 / 地点" },
+      dreadfort: { name: "恐怖堡", coord: xy(1085, 768), aliases: ["恐怖堡"] },
+      weepingWater: { name: "哭江河", coord: xy(1125, 940), aliases: ["哭江河"], typeLabel: "河流 / 地点" },
+      whiteHarbor: { name: "白港", coord: xy(932, 1168), aliases: ["白港"] },
+      ramsgate: { name: "赛文城", coord: xy(718, 908), aliases: ["赛文城"] },
+      neck: { name: "颈泽", coord: xy(714, 1420), aliases: ["颈泽"], typeLabel: "区域 / 地点" },
+      greywaterWatch: { name: "灰水望", coord: xy(654, 1510), aliases: ["灰水望"] },
+      flintsFinger: { name: "菲林特之指", coord: xy(346, 1268), aliases: ["菲林特之指"], typeLabel: "半岛 / 地点" },
+      flintsCliffs: { name: "菲林特悬崖", coord: xy(338, 1402), aliases: ["菲林特悬崖"], typeLabel: "海岸 / 地点" },
+      blazewaterBay: { name: "明焰湾", coord: xy(330, 1260), aliases: ["明焰湾"], typeLabel: "海湾 / 地点" },
+      capeKraken: { name: "海怪角", coord: xy(306, 1375), aliases: ["海怪角"], typeLabel: "海角 / 地点" },
+      eaglesPoint: { name: "雄鹰角", coord: xy(554, 1545), aliases: ["雄鹰角"], typeLabel: "海角 / 地点" },
+      kayce: { name: "凯切镇", coord: xy(342, 2012), aliases: ["凯切镇"] },
+      feastfires: { name: "宴火城", coord: xy(288, 2058), aliases: ["宴火城"] },
+      casterlyRock: { name: "凯岩城", coord: xy(458, 2054), aliases: ["凯岩城"] },
+      lannisport: { name: "兰尼斯港", coord: xy(420, 2104), aliases: ["兰尼斯港"] },
+      cornfield: { name: "玉米城", coord: xy(420, 2300), aliases: ["玉米城"] },
+      crakehall: { name: "古橡城", coord: xy(558, 2380), aliases: ["古橡城"] },
+      oxcross: { name: "公牛路口", coord: xy(602, 2026), aliases: ["公牛路口", "牛路口"] },
+      deepDen: { name: "深穴城", coord: xy(545, 2104), aliases: ["深穴城"] },
+      silverhill: { name: "银山城", coord: xy(506, 2185), aliases: ["银山城"] },
+      hornvale: { name: "角谷城", coord: xy(540, 2026), aliases: ["角谷城"] },
+      stoneHedge: { name: "石篱镇", coord: xy(740, 2025), aliases: ["石篱镇"] },
+      tumblersFalls: { name: "腾石河", coord: xy(466, 1792), aliases: ["腾石河"], typeLabel: "河流 / 地点" },
+      riverRoad: { name: "河间大道", coord: xy(620, 1788), aliases: ["河间大道"], typeLabel: "道路 / 地点" },
+      riverrun: { name: "奔流城", coord: xy(670, 1778), aliases: ["奔流城"] },
+      fairmarket: { name: "美人市集", coord: xy(742, 1712), aliases: ["美人市集"] },
+      seagard: { name: "海疆城", coord: xy(720, 1625), aliases: ["海疆城"] },
+      stoneMill: { name: "屈膝之栈", coord: xy(1002, 1778), aliases: ["屈膝之栈"] },
+      acornHall: { name: "橡果厅", coord: xy(704, 1880), aliases: ["橡果厅"] },
+      highHeart: { name: "高尚之心", coord: xy(810, 1840), aliases: ["高尚之心"] },
+      pinkmaiden: { name: "红粉城", coord: xy(666, 1902), aliases: ["红粉城"] },
+      redFork: { name: "红叉河", coord: xy(650, 1900), aliases: ["红叉河"], typeLabel: "河流 / 地点" },
+      blueFork: { name: "蓝叉河", coord: xy(812, 1978), aliases: ["蓝叉河"], typeLabel: "河流 / 地点" },
+      greenFork: { name: "绿叉河", coord: xy(840, 2140), aliases: ["绿叉河"], typeLabel: "河流 / 地点" },
+      trident: { name: "三叉戟河", coord: xy(826, 1970), aliases: ["三叉戟河"], typeLabel: "河流 / 地点" },
+      oldstones: { name: "旧石城", coord: xy(680, 1600), aliases: ["旧石城"] },
+      twins: { name: "孪河城", coord: xy(650, 1588), aliases: ["孪河城", "血色婚礼"] },
+      crossroadsInn: { name: "十字路口旅店", coord: xy(866, 1834), aliases: ["十字路口旅店", "十字路口"] },
+      lordHarrowaysTown: { name: "哈罗威伯爵的小镇", coord: xy(884, 1905), aliases: ["哈罗威伯爵的小镇"] },
+      harrenhal: { name: "赫伦堡", coord: xy(910, 1930), aliases: ["赫伦堡"] },
+      godsEye: { name: "神眼湖", coord: xy(866, 1968), aliases: ["神眼湖", "千面屿"], typeLabel: "湖泊 / 地点" },
+      isleOfFaces: { name: "千面屿", coord: xy(902, 2000), aliases: ["千面屿"], typeLabel: "岛屿 / 地点" },
+      whitewalls: { name: "白墙城", coord: xy(640, 1948), aliases: ["白墙城"] },
+      redgrassField: { name: "红草原", coord: xy(720, 1900), aliases: ["红草原"] },
+      darry: { name: "戴瑞城", coord: xy(922, 2245), aliases: ["戴瑞城"] },
+      stoneSept: { name: "石堂镇", coord: xy(910, 1665), aliases: ["石堂镇", "鸣钟之战"] },
+      eyrie: { name: "鹰巢城", coord: xy(1118, 1708), aliases: ["鹰巢城", "谷地"] },
+      vale: { name: "谷地", coord: xy(1182, 1640), aliases: ["谷地"], typeLabel: "区域 / 地点" },
+      gatesOfTheMoon: { name: "血门", coord: xy(970, 1748), aliases: ["血门"] },
+      ironoaks: { name: "铁橡城", coord: xy(1300, 1665), aliases: ["铁橡城"] },
+      redfort: { name: "红垒", coord: xy(1215, 1766), aliases: ["红垒"] },
+      wickenden: { name: "女泉城", coord: xy(1110, 1952), aliases: ["女泉城"] },
+      gulltown: { name: "海鸥镇", coord: xy(1322, 1758), aliases: ["海鸥镇"] },
+      runestone: { name: "符石城", coord: xy(1364, 1708), aliases: ["符石城"] },
+      crabBay: { name: "蟹爪湾", coord: xy(1244, 1858), aliases: ["蟹爪湾"], typeLabel: "海湾 / 地点" },
+      crackclawPoint: { name: "蟹爪半岛", coord: xy(1266, 1905), aliases: ["蟹爪半岛"], typeLabel: "半岛 / 地点" },
+      pyke: { name: "派克城", coord: xy(322, 1655), aliases: ["派克城", "铁群岛"] },
+      ironIslands: { name: "铁群岛", coord: xy(320, 1545), aliases: ["铁群岛"], typeLabel: "区域 / 地点" },
+      greatWyk: { name: "大威克岛", coord: xy(370, 1628), aliases: ["大威克岛"], typeLabel: "岛屿 / 地点" },
+      oldWyk: { name: "老威克岛", coord: xy(704, 1575), aliases: ["老威克岛"], typeLabel: "岛屿 / 地点" },
+      blacktyde: { name: "黑潮岛", coord: xy(342, 1558), aliases: ["黑潮岛"], typeLabel: "岛屿 / 地点" },
+      saltcliffe: { name: "盐崖岛", coord: xy(450, 1668), aliases: ["盐崖岛"], typeLabel: "岛屿 / 地点" },
+      harlaw: { name: "哈尔洛岛", coord: xy(535, 1580), aliases: ["哈尔洛岛"], typeLabel: "岛屿 / 地点" },
+      orkmont: { name: "奥克蒙岛", coord: xy(515, 1490), aliases: ["奥克蒙岛"], typeLabel: "岛屿 / 地点" },
+      tenTowers: { name: "十塔城", coord: xy(455, 1645), aliases: ["十塔城"] },
+      fairIsle: { name: "仙女岛", coord: xy(388, 1845), aliases: ["仙女岛"], typeLabel: "岛屿 / 地点" },
+      faircastle: { name: "仙女城", coord: xy(356, 1812), aliases: ["仙女城"] },
+      lordsport: { name: "祈望", coord: xy(382, 1732), aliases: ["祈望"] },
+      goldenTooth: { name: "金牙城", coord: xy(590, 1790), aliases: ["金牙城"] },
+      shieldIslands: { name: "盾牌列岛", coord: xy(360, 2460), aliases: ["盾牌列岛"], typeLabel: "岛屿 / 地点" },
+      greyshield: { name: "灰盾岛", coord: xy(456, 2460), aliases: ["灰盾岛"], typeLabel: "岛屿 / 地点" },
+      greenshield: { name: "绿盾岛", coord: xy(625, 2490), aliases: ["绿盾岛"], typeLabel: "岛屿 / 地点" },
+      southshield: { name: "南盾岛", coord: xy(550, 2515), aliases: ["南盾岛"], typeLabel: "岛屿 / 地点" },
+      highgarden: { name: "高庭", coord: xy(448, 2580), aliases: ["高庭"] },
+      oldtown: { name: "旧镇", coord: xy(330, 2778), aliases: ["旧镇"] },
+      hightower: { name: "参天塔", coord: xy(332, 2650), aliases: ["参天塔"] },
+      blackcrown: { name: "黑冠城", coord: xy(206, 2690), aliases: ["黑冠城"] },
+      threeTowers: { name: "三塔堡", coord: xy(230, 2768), aliases: ["三塔堡"] },
+      bandallon: { name: "班达伦堡", coord: xy(374, 2585), aliases: ["班达伦堡"] },
+      honeyholt: { name: "蜂巢城", coord: xy(346, 2632), aliases: ["蜂巢城"] },
+      honeywine: { name: "蜜酒河", coord: xy(338, 2638), aliases: ["蜜酒河"], typeLabel: "河流 / 地点" },
+      brightwaterKeep: { name: "亮水城", coord: xy(312, 2526), aliases: ["亮水城"] },
+      lowther: { name: "低语湾", coord: xy(260, 2830), aliases: ["低语湾"], typeLabel: "海湾 / 地点" },
+      redwyneStraits: { name: "雷德温海峡", coord: xy(440, 2890), aliases: ["雷德温海峡"], typeLabel: "海峡 / 地点" },
+      arbor: { name: "青亭岛", coord: xy(320, 2950), aliases: ["青亭岛"], typeLabel: "岛屿 / 地点" },
+      ciderHall: { name: "果酒厅", coord: xy(650, 2508), aliases: ["果酒厅"] },
+      bitterbridge: { name: "苦桥", coord: xy(758, 2428), aliases: ["苦桥"] },
+      roseRoad: { name: "玫瑰大道", coord: xy(590, 2545), aliases: ["玫瑰大道"], typeLabel: "道路 / 地点" },
+      manderRiver: { name: "曼德河", coord: xy(800, 2680), aliases: ["曼德河", "舟徒河"], typeLabel: "河流 / 地点" },
+      blueburnRiver: { name: "蓝布恩河", coord: xy(786, 2504), aliases: ["蓝布恩河"], typeLabel: "河流 / 地点" },
+      goldengrove: { name: "金树城", coord: xy(545, 2372), aliases: ["金树城"] },
+      longtable: { name: "长桌堡", coord: xy(724, 2442), aliases: ["长桌堡"] },
+      ashford: { name: "白杨滩", coord: xy(780, 2530), aliases: ["白杨滩", "白杨镇"] },
+      hornHill: { name: "角陵", coord: xy(508, 2592), aliases: ["角陵"] },
+      dornishMarches: { name: "多恩边疆地", coord: xy(818, 2588), aliases: ["多恩边疆地"], typeLabel: "区域 / 地点" },
+      nightsong: { name: "夜歌城", coord: xy(618, 2688), aliases: ["夜歌城"] },
+      princesPass: { name: "亲王隘口", coord: xy(715, 2768), aliases: ["亲王隘口"], typeLabel: "山口 / 地点" },
+      vultureRoost: { name: "秃鹫巢", coord: xy(760, 2674), aliases: ["秃鹫巢"] },
+      kingsgrave: { name: "皇家城", coord: xy(760, 2752), aliases: ["皇家城"] },
+      blackhaven: { name: "黑港", coord: xy(882, 2570), aliases: ["黑港"] },
+      summerhall: { name: "盛夏厅", coord: xy(978, 2428), aliases: ["盛夏厅"] },
+      weepingTown: { name: "鸦巢堡", coord: xy(1090, 2500), aliases: ["鸦巢堡"] },
+      griffinsRoost: { name: "鹫巢堡", coord: xy(1098, 2572), aliases: ["鹫巢堡", "格里芬栖所"] },
+      stonehelm: { name: "石盔城", coord: xy(1082, 2612), aliases: ["石盔城"] },
+      capeWrath: { name: "风怒角", coord: xy(1290, 2760), aliases: ["风怒角"], typeLabel: "海角 / 地点" },
+      stormsEnd: { name: "风息堡", coord: xy(1216, 2440), aliases: ["风息堡"] },
+      stormlandsCamp: { name: "风息堡外", coord: xy(1216, 2440), aliases: ["风息堡外营地"] },
+      shipbreakerBay: { name: "破船湾", coord: xy(1285, 2460), aliases: ["破船湾"], typeLabel: "海湾 / 地点" },
+      rainHouse: { name: "雨屋城", coord: xy(1410, 2500), aliases: ["雨屋城"] },
+      rainwood: { name: "雨林", coord: xy(1285, 2620), aliases: ["雨林"], typeLabel: "森林 / 地点" },
+      greenstone: { name: "绿石堡", coord: xy(1405, 2604), aliases: ["绿石堡"] },
+      mistwood: { name: "雾林城", coord: xy(1300, 2700), aliases: ["雾林城"] },
+      tarth: { name: "塔斯岛", coord: xy(1396, 2385), aliases: ["塔斯岛"], typeLabel: "岛屿 / 地点" },
+      capeRage: { name: "尖角", coord: xy(1310, 2118), aliases: ["尖角"], typeLabel: "海角 / 地点" },
+      stonehelmPoint: { name: "石扬堡", coord: xy(1372, 2170), aliases: ["石扬堡"] },
+      masseysHook: { name: "马赛岬", coord: xy(1270, 2248), aliases: ["马赛岬"], typeLabel: "海角 / 地点" },
+      bronzegate: { name: "铜门城", coord: xy(1130, 2390), aliases: ["铜门城"] },
+      haystackHall: { name: "干草厅", coord: xy(1118, 2312), aliases: ["干草厅"] },
+      kingswood: { name: "御林", coord: xy(1018, 2265), aliases: ["御林"], typeLabel: "森林 / 地点" },
+      kingsLanding: { name: "君临", coord: xy(938, 2205), aliases: ["君临", "红堡", "贝勒大圣堂", "龙穴", "黑水河口"] },
+      redKeep: { name: "红堡", coord: xy(965, 2205), aliases: ["红堡"] },
+      rosby: { name: "罗斯比城", coord: xy(1020, 2148), aliases: ["罗斯比城"] },
+      duskendale: { name: "暮谷城", coord: xy(1082, 2090), aliases: ["暮谷镇", "暮谷城"] },
+      sowHorn: { name: "母猪角", coord: xy(938, 2055), aliases: ["母猪角"], typeLabel: "海角 / 地点" },
+      antlers: { name: "鹿角堡", coord: xy(1015, 2000), aliases: ["鹿角堡"] },
+      blackwaterRiver: { name: "黑水河", coord: xy(890, 2150), aliases: ["黑水河"], typeLabel: "河流 / 地点" },
+      blackwaterBay: { name: "黑水湾", coord: xy(1240, 2170), aliases: ["黑水湾", "黑水河之战"], typeLabel: "海湾 / 地点" },
+      dragonstone: { name: "龙石岛", coord: xy(1362, 2035), aliases: ["龙石岛"], typeLabel: "岛屿 / 地点" },
+      clawIsle: { name: "蟹岛", coord: xy(1348, 1918), aliases: ["蟹岛"], typeLabel: "岛屿 / 地点" },
+      stepstones: { name: "石阶列岛", coord: xy(1398, 2732), aliases: ["石阶列岛"], typeLabel: "岛屿 / 地点" },
+      dorne: { name: "多恩", coord: xy(820, 2895), aliases: ["多恩"], typeLabel: "区域 / 地点" },
+      redMountains: { name: "红色山脉", coord: xy(760, 2920), aliases: ["红色山脉", "多恩红色山脉"], typeLabel: "山脉 / 地点" },
+      highHermitage: { name: "高隐城", coord: xy(560, 2820), aliases: ["高隐城"] },
+      starfall: { name: "星坠城", coord: xy(545, 2870), aliases: ["星坠城"] },
+      skyreach: { name: "天及城", coord: xy(710, 2820), aliases: ["天及城"] },
+      sandstone: { name: "沙石城", coord: xy(800, 2920), aliases: ["沙石城"] },
+      hellholt: { name: "狱门堡", coord: xy(940, 2910), aliases: ["狱门堡"] },
+      ghostHill: { name: "魂丘", coord: xy(1270, 2820), aliases: ["魂丘"] },
+      plankyTown: { name: "板条镇", coord: xy(1285, 2895), aliases: ["板条镇"] },
+      sunspear: { name: "阳戟城", coord: xy(1350, 2915), aliases: ["阳戟城"] },
+      lemonwood: { name: "柠檬林", coord: xy(1280, 2990), aliases: ["柠檬林"] },
+      brokenArm: { name: "断臂角", coord: xy(1338, 2810), aliases: ["断臂角"], typeLabel: "海角 / 地点" },
+      tor: { name: "托尔城", coord: xy(1000, 2818), aliases: ["托尔城"] },
+      vaith: { name: "万斯河", coord: xy(924, 2960), aliases: ["万斯河"], typeLabel: "河流 / 地点" },
+      scourge: { name: "祸江", coord: xy(1010, 2938), aliases: ["祸江"], typeLabel: "河流 / 地点" },
+      godsgrace: { name: "神恩城", coord: xy(1070, 2932), aliases: ["神恩城"] },
+      greenblood: { name: "绿血河", coord: xy(1175, 2968), aliases: ["绿血河", "板条镇"], typeLabel: "河流 / 地点" },
+      saltShore: { name: "盐海岸", coord: xy(1020, 3065), aliases: ["盐海岸"], typeLabel: "海岸 / 地点" },
+      summerSea: { name: "夏日之海", coord: xy(840, 3120), aliases: ["夏日之海"], typeLabel: "海域 / 地点" }
+    });
+
+    const houses = {
+      stark: { name: "史塔克", crest: "狼", color: "#4d5358", light: "#8b9499", crestColor: "#f2eee1" },
+      lannister: { name: "兰尼斯特", crest: "狮", color: "#a71f28", light: "#ce3b3c", crestColor: "#f2c85f" },
+      tyrell: { name: "提利尔", crest: "玫", color: "#1f7444", light: "#4aa26a", crestColor: "#f0df9a" },
+      tully: { name: "徒利", crest: "鱼", color: "#235f92", light: "#5a93bc", crestColor: "#efdfbf" },
+      arryn: { name: "艾林", crest: "月", color: "#2274a8", light: "#54a6d4", crestColor: "#f4f0cf" },
+      greyjoy: { name: "葛雷乔伊", crest: "铁", color: "#20262b", light: "#4a5156", crestColor: "#d4b357" },
+      baratheon: { name: "拜拉席恩", crest: "鹿", color: "#c99625", light: "#e1bc3a", crestColor: "#241910" },
+      martell: { name: "马泰尔", crest: "日", color: "#c76528", light: "#e59a3d", crestColor: "#7e1718" },
+      targaryen: { name: "坦格利安", crest: "龙", color: "#61131d", light: "#9d2130", crestColor: "#16100f" },
+      hightower: { name: "海塔尔", crest: "塔", color: "#1f6d5f", light: "#54a690", crestColor: "#f0ead8" },
+      nightswatch: { name: "守夜人", crest: "夜", color: "#111315", light: "#353b40", crestColor: "#d8e2dd" },
+      throne: { name: "铁王座", crest: "冠", color: "#1c1b1a", light: "#514236", crestColor: "#d7b56d" }
+    };
+
+    // 坐标格式为 [y, x]，对应图片像素空间中的 [height - pixelY, pixelX]。
+    const castles = [
+      { name: "临冬城", houseId: "stark", coord: [1998, 500] },
+      { name: "黑城堡", houseId: "nightswatch", coord: [2318, 596] },
+      { name: "凯岩城", houseId: "lannister", coord: [1080, 226] },
+      { name: "奔流城", houseId: "tully", coord: [1208, 515] },
+      { name: "派克城", houseId: "greyjoy", coord: [1315, 225] },
+      { name: "鹰巢城", houseId: "arryn", coord: [1438, 900] },
+      { name: "君临", houseId: "throne", coord: [888, 712] },
+      { name: "龙石岛", houseId: "targaryen", coord: [956, 940] },
+      { name: "风息堡", houseId: "baratheon", coord: [708, 850] },
+      { name: "高庭", houseId: "tyrell", coord: [512, 445] },
+      { name: "旧镇", houseId: "hightower", coord: [324, 318] },
+      { name: "阳戟城", houseId: "martell", coord: [250, 1048] }
+    ];
+
+    const mapLabels = [
+      { text: "北境", coord: [1940, 520], type: "region" },
+      { text: "长城", coord: [2322, 610], type: "region" },
+      { text: "颈泽", coord: [1560, 515], type: "small" },
+      { text: "铁群岛", coord: [1288, 212], type: "region" },
+      { text: "河间地", coord: [1228, 570], type: "region" },
+      { text: "谷地", coord: [1470, 930], type: "region" },
+      { text: "西境", coord: [980, 240], type: "region" },
+      { text: "王领", coord: [880, 690], type: "region" },
+      { text: "风暴地", coord: [670, 840], type: "region" },
+      { text: "河湾地", coord: [525, 420], type: "region" },
+      { text: "多恩", coord: [255, 1018], type: "region" },
+      { text: "临冬城", coord: [2028, 500], type: "small" },
+      { text: "君临", coord: [918, 712], type: "small" },
+      { text: "凯岩城", coord: [1110, 226], type: "small" },
+      { text: "奔流城", coord: [1238, 515], type: "small" },
+      { text: "鹰巢城", coord: [1468, 900], type: "small" },
+      { text: "派克城", coord: [1345, 225], type: "small" },
+      { text: "高庭", coord: [542, 445], type: "small" },
+      { text: "金树城", coord: [885, 490], type: "small" },
+      { text: "苦桥", coord: [892, 760], type: "small" },
+      { text: "绿谷城", coord: [872, 1120], type: "small" },
+      { text: "长桌堡", coord: [768, 705], type: "small" },
+      { text: "果酒厅", coord: [642, 598], type: "small" },
+      { text: "白杨滩", coord: [592, 835], type: "small" },
+      { text: "黑港", coord: [505, 1172], type: "small" },
+      { text: "夜歌城", coord: [350, 652], type: "small" },
+      { text: "角陵", coord: [392, 405], type: "small" },
+      { text: "玫瑰大道", coord: [760, 540], type: "small" },
+      { text: "舟徒河", coord: [578, 736], type: "small" },
+      { text: "蓝布恩河", coord: [782, 930], type: "small" },
+      { text: "多恩边疆地", coord: [498, 1010], type: "region" },
+      { text: "旧镇", coord: [354, 318], type: "small" },
+      { text: "阳戟城", coord: [280, 1048], type: "small" },
+      { text: "龙石岛", coord: [986, 940], type: "small" },
+      { text: "风息堡", coord: [738, 850], type: "small" },
+      { text: "赫伦堡", coord: [1290, 650], type: "small" },
+      { text: "三叉戟河", coord: [1352, 620], type: "small" },
+      { text: "孪河城", coord: [1475, 496], type: "small" },
+      { text: "日落之海", coord: [1280, 70], type: "sea" },
+      { text: "狭海", coord: [1200, 1120], type: "sea" },
+      { text: "夏日之海", coord: [120, 720], type: "sea" },
+      { text: "黑水湾", coord: [820, 790], type: "sea" },
+      { text: "冰湾", coord: [2200, 190], type: "sea" },
+      { text: "蟹湾", coord: [1190, 840], type: "sea" }
+    ];
+
+    const characters = {
+      jon: {
+        name: "琼恩·雪诺",
+        avatar: "https://static.wikia.nocookie.net/gameofthrones/images/d/d0/JonSnow8x06.PNG/revision/latest?cb=20190714094440",
+        source: "Game of Thrones Wiki / Fandom"
+      },
+      daenerys: {
+        name: "丹妮莉丝·坦格利安",
+        avatar: "https://static.wikia.nocookie.net/gameofthrones/images/4/4f/Daenerys_Season_8.jpg/revision/latest?cb=20190415212013",
+        source: "Game of Thrones Wiki / Fandom"
+      },
+      ned: {
+        name: "艾德·史塔克",
+        avatar: "https://static.wikia.nocookie.net/gameofthrones/images/3/34/Eddard_Stark.jpg/revision/latest?cb=20190701140812",
+        source: "Game of Thrones Wiki / Fandom"
+      },
+      cersei: {
+        name: "瑟曦·兰尼斯特",
+        avatar: "https://static.wikia.nocookie.net/gameofthrones/images/b/b0/CERSEIBATTLEOFKINGSLANDING.PNG/revision/latest?cb=20190906021534",
+        source: "Game of Thrones Wiki / Fandom"
+      },
+      robert: {
+        name: "劳勃·拜拉席恩",
+        avatar: "https://static.wikia.nocookie.net/gameofthrones/images/4/43/Robert_crop.png/revision/latest?cb=20210223122212",
+        source: "Game of Thrones Wiki / Fandom"
+      },
+      tyrion: {
+        name: "提利昂·兰尼斯特",
+        avatar: "https://static.wikia.nocookie.net/gameofthrones/images/9/95/HandoftheKingTyrionLannister.PNG/revision/latest?cb=20190520175204",
+        source: "Game of Thrones Wiki / Fandom"
+      },
+      jaime: {
+        name: "詹姆·兰尼斯特",
+        avatar: "https://static.wikia.nocookie.net/gameofthrones/images/5/51/JaimeLannisterSeason8.PNG/revision/latest?cb=20190207112813",
+        source: "Game of Thrones Wiki / Fandom"
+      },
+      robb: {
+        name: "罗柏·史塔克",
+        avatar: "https://static.wikia.nocookie.net/gameofthrones/images/5/50/S3E9_Robb_Stark_main.jpg/revision/latest?cb=20160718071203",
+        source: "Game of Thrones Wiki / Fandom"
+      },
+      catelyn: { name: "凯特琳·史塔克" },
+      sansa: { name: "珊莎·史塔克" },
+      arya: { name: "艾莉亚·史塔克" },
+      bran: { name: "布兰·史塔克" },
+      rhaegar: { name: "雷加·坦格利安" },
+      lyanna: { name: "莱安娜·史塔克" },
+      tywin: { name: "泰温·兰尼斯特" },
+      joffrey: { name: "乔佛里·拜拉席恩" },
+      stannis: { name: "史坦尼斯·拜拉席恩" },
+      renly: { name: "蓝礼·拜拉席恩" },
+      melisandre: { name: "梅丽珊卓" },
+      theon: { name: "席恩·葛雷乔伊" },
+      davos: { name: "戴佛斯·席渥斯" },
+      samwell: { name: "山姆威尔·塔利" },
+      brienne: { name: "布蕾妮·塔斯" },
+      asha: { name: "阿莎·葛雷乔伊" },
+      aeron: { name: "湿发伊伦" },
+      victarion: { name: "维克塔利昂·葛雷乔伊" },
+      arianne: { name: "亚莲恩·马泰尔" },
+      areo: { name: "亚利欧·何塔" },
+      quentyn: { name: "昆廷·马泰尔" },
+      barristan: { name: "巴利斯坦·赛尔弥" },
+      joncon: { name: "琼恩·克林顿" },
+      ramsay: { name: "拉姆斯·波顿" },
+      olenna: { name: "奥莲娜·提利尔" },
+      nightking: { name: "夜王" }
+    };
+
+    const characterMatchRules = [
+      { id: "jon", aliases: ["琼恩·雪诺", "琼恩遇刺", "琼恩、", "琼恩，", "琼恩因"], exclude: ["琼恩·艾林", "琼恩·克林顿"] },
+      { id: "daenerys", aliases: ["丹妮莉丝", "Daenerys", "龙母"] },
+      { id: "ned", aliases: ["艾德", "Eddard", "奈德"] },
+      { id: "cersei", aliases: ["瑟曦", "Cersei"] },
+      { id: "robert", aliases: ["劳勃", "Robert"] },
+      { id: "tyrion", aliases: ["提利昂", "Tyrion"] },
+      { id: "jaime", aliases: ["詹姆", "Jaime"] },
+      { id: "robb", aliases: ["罗柏", "Robb", "少狼主"] },
+      { id: "catelyn", aliases: ["凯特琳", "Catelyn", "石心夫人"] },
+      { id: "sansa", aliases: ["珊莎", "Sansa"] },
+      { id: "arya", aliases: ["艾莉亚", "Arya"] },
+      { id: "bran", aliases: ["布兰·史塔克", "布兰坠塔", "布兰、", "布兰，"], exclude: ["布兰登"] },
+      { id: "rhaegar", aliases: ["雷加", "Rhaegar"] },
+      { id: "lyanna", aliases: ["莱安娜", "Lyanna"] },
+      { id: "tywin", aliases: ["泰温", "Tywin"] },
+      { id: "joffrey", aliases: ["乔佛里", "Joffrey"] },
+      { id: "stannis", aliases: ["史坦尼斯", "Stannis"] },
+      { id: "renly", aliases: ["蓝礼", "Renly"] },
+      { id: "melisandre", aliases: ["梅丽珊卓", "Melisandre"] },
+      { id: "theon", aliases: ["席恩", "Theon"] },
+      { id: "davos", aliases: ["戴佛斯", "Davos", "洋葱骑士"] },
+      { id: "samwell", aliases: ["山姆威尔", "山姆", "Samwell", "Sam"] },
+      { id: "brienne", aliases: ["布蕾妮", "Brienne"] },
+      { id: "asha", aliases: ["阿莎", "Asha"] },
+      { id: "aeron", aliases: ["湿发伊伦", "伊伦·葛雷乔伊", "Aeron"] },
+      { id: "victarion", aliases: ["维克塔利昂", "Victarion"] },
+      { id: "arianne", aliases: ["亚莲恩", "Arianne"] },
+      { id: "areo", aliases: ["亚利欧", "Areo"] },
+      { id: "quentyn", aliases: ["昆廷", "Quentyn"] },
+      { id: "barristan", aliases: ["巴利斯坦", "Barristan"] },
+      { id: "joncon", aliases: ["琼恩·克林顿", "Jon Connington"] },
+      { id: "ramsay", aliases: ["拉姆斯", "Ramsay"] },
+      { id: "olenna", aliases: ["奥莲娜", "Olenna"] },
+      { id: "nightking", aliases: ["夜王", "Night King"] }
+    ];
+
+    const majorEvents = [
+      {
+        id: "aegons-landing",
+        title: "伊耿登陆",
+        time: "征服战争，A.C. 1",
+        place: "黑水河口 / 后来的君临",
+        coord: [888, 712],
+        category: "征服战争",
+        related: "伊耿一世、维桑尼亚、雷妮丝、坦格利安舰队",
+        summary: "伊耿在黑水河口登陆，建立最初的木堡，并以此为七国征服的政治与军事中心。",
+        impact: "君临由此诞生，铁王座的地理中心被固定在黑水湾。"
+      },
+      {
+        id: "field-of-fire",
+        title: "怒火燎原之战",
+        time: "征服战争，A.C. 1",
+        place: "河湾地北部平原",
+        coord: [740, 430],
+        category: "决战",
+        related: "伊耿一世、梅伦·园丁、罗伦·兰尼斯特、三条巨龙",
+        summary: "园丁王与兰尼斯特王联军在开阔地迎战坦格利安，三龙焚毁大军阵列。",
+        impact: "园丁家灭绝，提利尔被扶为高庭领主，西境向铁王座臣服。"
+      },
+      {
+        id: "harrenhal-burning",
+        title: "赫伦堡焚毁",
+        time: "征服战争，A.C. 1",
+        place: "赫伦堡",
+        coord: [1260, 650],
+        category: "龙焰",
+        related: "伊耿一世、黑心赫伦、贝勒里恩",
+        summary: "黑心赫伦拒绝臣服，贝勒里恩从高空以龙焰熔毁巨堡高塔。",
+        impact: "铁民在河间地的统治结束，赫伦堡成为维斯特洛最著名的诅咒城堡。"
+      },
+      {
+        id: "torrhen-kneels",
+        title: "跪王归降",
+        time: "征服战争，A.C. 1",
+        place: "三叉戟河畔",
+        coord: [1340, 610],
+        category: "政治转折",
+        related: "托伦·史塔克、伊耿一世、北境大军",
+        summary: "北境之王托伦·史塔克审时度势，向伊耿臣服，避免北境遭受龙焰毁灭。",
+        impact: "史塔克保住临冬城与北境统治权，但王冠降格为守护。"
+      },
+      {
+        id: "dorne-resists",
+        title: "多恩拒降",
+        time: "征服战争后期",
+        place: "阳戟城与多恩沙漠",
+        coord: [250, 1048],
+        category: "抵抗",
+        related: "梅莉亚·马泰尔、雷妮丝、坦格利安王室",
+        summary: "多恩采用游击与撤城策略，拒绝在正面战场与巨龙硬碰。",
+        impact: "多恩成为七国中最晚并入铁王座的地区。"
+      },
+      {
+        id: "faith-uprising",
+        title: "武装教团叛乱",
+        time: "A.C. 37-48",
+        place: "君临、旧镇及河湾地",
+        coord: [888, 712],
+        category: "宗教战争",
+        related: "梅葛一世、七神教会、战士之子、穷人集会",
+        summary: "坦格利安婚俗与王权扩张激怒教会，王权与武装教团爆发长期冲突。",
+        impact: "王权最终压服教会武装，但君临与旧镇的宗教政治格局被重塑。"
+      },
+      {
+        id: "jaehaerys-roads",
+        title: "杰赫里斯大道工程",
+        time: "A.C. 55 以后",
+        place: "国王大道与七国主干道",
+        coord: [1500, 560],
+        category: "治理",
+        related: "杰赫里斯一世、亚莉珊王后、七国领主",
+        summary: "贤王时期大规模修筑道路，国王大道贯通君临、河间、北境与长城。",
+        impact: "七国交通、税收、军事调动和王室巡行效率显著提高。"
+      },
+      {
+        id: "great-council-101",
+        title: "赫伦堡大议会",
+        time: "A.C. 101",
+        place: "赫伦堡",
+        coord: [1260, 650],
+        category: "继承危机",
+        related: "杰赫里斯一世、韦赛里斯、雷妮丝、七国领主",
+        summary: "七国领主在赫伦堡裁定王位继承，选择韦赛里斯而非雷妮丝一系。",
+        impact: "男性优先继承被强化，为后来的龙家内战埋下种子。"
+      },
+      {
+        id: "dance-storms-end",
+        title: "风息堡求婚冲突",
+        time: "魔龙狂舞，A.C. 129",
+        place: "风息堡",
+        coord: [708, 850],
+        category: "内战导火索",
+        related: "路斯里斯、伊蒙德、博洛斯·拜拉席恩",
+        summary: "黑党与绿党先后来到风息堡争取拜拉席恩支持，冲突很快升级为空中追杀。",
+        impact: "路斯里斯之死让内战彻底失控，双方进入血债循环。"
+      },
+      {
+        id: "battle-above-gods-eye",
+        title: "神眼湖上空决斗",
+        time: "魔龙狂舞，A.C. 130",
+        place: "神眼湖 / 赫伦堡附近",
+        coord: [1240, 646],
+        category: "龙战",
+        related: "戴蒙·坦格利安、伊蒙德·坦格利安、科拉克休、瓦格哈尔",
+        summary: "两位龙骑士在神眼湖上空决战，最终双双坠入湖中。",
+        impact: "绿党最强龙骑士陨落，坦格利安巨龙力量进一步衰败。"
+      },
+      {
+        id: "storming-dragonpit",
+        title: "龙穴暴动",
+        time: "魔龙狂舞，A.C. 130",
+        place: "君临龙穴",
+        coord: [888, 712],
+        category: "城市暴乱",
+        related: "君临平民、龙、雷妮拉政权",
+        summary: "君临民众冲入龙穴，杀死多条被囚巨龙。",
+        impact: "坦格利安龙群遭到不可逆重创，王朝神圣威慑崩塌。"
+      },
+      {
+        id: "conquest-dorne-daeron",
+        title: "少龙王征服多恩",
+        time: "A.C. 157-161",
+        place: "骨路与阳戟城",
+        coord: [310, 930],
+        category: "征服战争",
+        related: "戴伦一世、马泰尔、多恩诸侯",
+        summary: "戴伦一世短暂征服多恩，却难以维持占领。",
+        impact: "多恩反抗导致戴伦身亡，坦格利安意识到仅靠军事难以吞并多恩。"
+      },
+      {
+        id: "dorne-marriage",
+        title: "多恩和平并入",
+        time: "A.C. 187",
+        place: "阳戟城",
+        coord: [250, 1048],
+        category: "联姻",
+        related: "戴伦二世、弥丽亚·马泰尔、马泰尔家族",
+        summary: "通过王室婚姻与政治让步，多恩以保留亲王头衔的方式加入七国。",
+        impact: "多恩成为七国一部分，但保留独特法律与高度自治。"
+      },
+      {
+        id: "redgrass-field",
+        title: "红草原之役",
+        time: "第一次黑火叛乱，A.C. 196",
+        place: "河湾地与王领边境",
+        coord: [815, 610],
+        category: "王朝战争",
+        related: "戴蒙·黑火、戴伦二世、血鸦、贝勒·破矛者",
+        summary: "黑火叛军与铁王座军队决战，戴蒙·黑火阵亡。",
+        impact: "黑火主支败亡海外，但黑火威胁延续数代。"
+      },
+      {
+        id: "whitewalls",
+        title: "白墙城阴谋",
+        time: "第二次黑火叛乱，A.C. 212",
+        place: "白墙城",
+        coord: [1165, 610],
+        category: "阴谋",
+        related: "戴蒙二世·黑火、血鸦、邓肯、伊戈",
+        summary: "黑火支持者试图在婚宴上发动复辟，最终被血鸦识破。",
+        impact: "黑火第二次叛乱未成气候，却让血鸦的情报网络名声大噪。"
+      },
+      {
+        id: "summerhall",
+        title: "盛夏厅悲剧",
+        time: "A.C. 259",
+        place: "盛夏厅",
+        coord: [690, 760],
+        category: "王室灾难",
+        related: "伊耿五世、邓肯王子、雷加·坦格利安",
+        summary: "王室试图孵化龙蛋的仪式以火灾告终，多名王室成员遇难。",
+        impact: "坦格利安王室继承线剧变，雷加在同日出生。"
+      },
+      {
+        id: "defiance-duskendale",
+        title: "暮谷镇抗命",
+        time: "A.C. 277",
+        place: "暮谷镇",
+        coord: [940, 768],
+        category: "王权危机",
+        related: "伊里斯二世、泰温·兰尼斯特、巴利斯坦·赛尔弥、达克林家族",
+        summary: "达克林家族囚禁疯王，巴利斯坦潜入救出国王。",
+        impact: "伊里斯变得更加偏执，王室与泰温关系恶化。"
+      },
+      {
+        id: "tourny-harrenhal",
+        title: "赫伦堡比武大会",
+        time: "A.C. 281",
+        place: "赫伦堡",
+        coord: [1260, 650],
+        category: "政治风暴",
+        related: "雷加、莱安娜、伊里斯二世、维斯特洛诸侯",
+        summary: "雷加将莱安娜选为爱与美的王后，宫廷与诸侯之间的紧张公开化。",
+        impact: "这场比武成为篡位者战争前最重要的政治前奏。"
+      },
+      {
+        id: "lyanna-abduction",
+        title: "莱安娜失踪",
+        time: "A.C. 282",
+        place: "河间地附近",
+        coord: [1360, 590],
+        category: "导火索",
+        related: "雷加、莱安娜、布兰登·史塔克、劳勃·拜拉席恩",
+        summary: "莱安娜与雷加离开公众视野，被北境与风暴地视作绑架。",
+        impact: "史塔克与拜拉席恩的反坦格利安情绪急剧爆发。"
+      },
+      {
+        id: "execution-starks",
+        title: "史塔克父子被处决",
+        time: "A.C. 282",
+        place: "君临红堡",
+        coord: [888, 712],
+        category: "暴政",
+        related: "伊里斯二世、瑞卡德·史塔克、布兰登·史塔克",
+        summary: "疯王处死瑞卡德与布兰登，并要求琼恩·艾林交出劳勃和艾德。",
+        impact: "北境、谷地与风暴地正式走向叛乱。"
+      },
+      {
+        id: "battle-bells",
+        title: "鸣钟之战",
+        time: "篡位者战争，A.C. 283",
+        place: "石堂镇",
+        coord: [1160, 575],
+        category: "战役",
+        related: "劳勃、琼恩·克林顿、艾德·史塔克、霍斯特·徒利",
+        summary: "劳勃负伤藏身城中，叛军在钟声中击败王军。",
+        impact: "琼恩·克林顿失势，坦格利安错失消灭劳勃的机会。"
+      },
+      {
+        id: "joncon-disgraced",
+        title: "琼恩·克林顿失去国王之手",
+        time: "篡位者战争，A.C. 283",
+        place: "鹫巢堡",
+        coord: placeCoords.griffinsRoost.coord,
+        category: "POV 路线",
+        related: "琼恩·克林顿、伊里斯二世、雷加、劳勃",
+        summary: "鸣钟之战失败后，琼恩·克林顿被疯王剥夺职位并流放，鹫巢堡与家族荣誉一同失去。",
+        impact: "琼恩·克林顿的 POV 线在后续原著中带着旧日失败和复辟执念返回。"
+      },
+      {
+        id: "battle-trident",
+        title: "三叉戟河之战",
+        time: "篡位者战争，A.C. 283",
+        place: "三叉戟河红宝石浅滩",
+        coord: [1320, 620],
+        category: "决战",
+        related: "劳勃·拜拉席恩、雷加·坦格利安、艾德·史塔克",
+        summary: "劳勃在浅滩击杀雷加，坦格利安主力溃败。",
+        impact: "战争胜负基本确定，红宝石浅滩成为新王朝的象征地点。"
+      },
+      {
+        id: "barristan-trident-wounded",
+        title: "巴利斯坦在三叉戟河负伤",
+        time: "篡位者战争，A.C. 283",
+        place: "三叉戟河红宝石浅滩",
+        coord: placeCoords.greenFork.coord,
+        category: "POV 路线",
+        related: "巴利斯坦、雷加、劳勃、御林铁卫",
+        summary: "巴利斯坦在三叉戟河为坦格利安作战并负重伤，战后被劳勃赦免留任御林铁卫。",
+        impact: "巴利斯坦的路线连接疯王时代、劳勃王朝和后来对丹妮莉丝的效忠。"
+      },
+      {
+        id: "sack-kings-landing",
+        title: "君临陷落",
+        time: "篡位者战争，A.C. 283",
+        place: "君临",
+        coord: [888, 712],
+        category: "城市陷落",
+        related: "泰温·兰尼斯特、詹姆·兰尼斯特、伊里斯二世、伊莉亚",
+        summary: "兰尼斯特军进入君临，城市遭洗劫；詹姆弑君阻止野火计划。",
+        impact: "坦格利安王朝结束，兰尼斯特取得新政权核心筹码。"
+      },
+      {
+        id: "tower-joy",
+        title: "极乐塔之战",
+        time: "篡位者战争后",
+        place: "多恩红色山脉",
+        coord: [430, 880],
+        category: "秘密",
+        related: "艾德·史塔克、黎明神剑亚瑟·戴恩、莱安娜·史塔克",
+        summary: "艾德与同伴在极乐塔面对御林铁卫，随后发现临终的莱安娜。",
+        impact: "琼恩·雪诺的身世秘密由此被艾德带回北境。"
+      },
+      {
+        id: "greyjoy-rebellion",
+        title: "葛雷乔伊叛乱",
+        time: "A.C. 289",
+        place: "派克城",
+        coord: [1315, 225],
+        category: "叛乱",
+        related: "巴隆·葛雷乔伊、劳勃·拜拉席恩、史坦尼斯、艾德",
+        summary: "巴隆自立为铁群岛之王，王军攻破派克后叛乱失败。",
+        impact: "席恩被送往临冬城做人质，铁群岛与北境命运被绑在一起。"
+      },
+      {
+        id: "jon-arryn-death",
+        title: "琼恩·艾林之死",
+        time: "A.C. 298",
+        place: "君临",
+        coord: [888, 712],
+        category: "阴谋",
+        related: "琼恩·艾林、莱莎、培提尔·贝里席、劳勃",
+        summary: "国王之手离奇死亡，劳勃北上邀请艾德接任。",
+        impact: "五王之战的第一块骨牌倒下。"
+      },
+      {
+        id: "royal-party-winterfell",
+        title: "王驾抵达临冬城",
+        time: "A.C. 298，原著第一卷",
+        place: "临冬城",
+        coord: placeCoords.winterfell.coord,
+        category: "POV 路线",
+        related: "劳勃、艾德、凯特琳、琼恩、珊莎、艾莉亚、布兰、提利昂",
+        summary: "劳勃北上任命艾德为国王之手，史塔克诸子的 POV 线由临冬城出发，分别走向君临、长城与河间地。",
+        impact: "这是原著主线人物分流的起点，家族日常被王国政治彻底打断。"
+      },
+      {
+        id: "jon-takes-black",
+        title: "琼恩加入守夜人",
+        time: "A.C. 298，原著第一卷",
+        place: "黑城堡",
+        coord: placeCoords.castleBlack.coord,
+        category: "POV 路线",
+        related: "琼恩·雪诺、提利昂、山姆威尔、班扬·史塔克、守夜人",
+        summary: "琼恩抵达黑城堡受训，随后与山姆威尔结成友谊，北境私生子的道路转入长城防线。",
+        impact: "琼恩和山姆威尔的 POV 线从史塔克家族政治转向守夜人与异鬼威胁。"
+      },
+      {
+        id: "catelyn-tyrion-arrest",
+        title: "凯特琳扣押提利昂",
+        time: "A.C. 298，原著第一卷",
+        place: "十字路口旅店",
+        coord: placeCoords.crossroadsInn.coord,
+        category: "POV 路线",
+        related: "凯特琳、提利昂、罗德利克·凯索、河间地旅人",
+        summary: "凯特琳在十字路口旅店认出提利昂，并以布兰坠塔疑案为由将他扣押。",
+        impact: "史塔克与兰尼斯特的暗斗从君临宫廷扩散到河间地道路。"
+      },
+      {
+        id: "tyrion-eyrie-trial",
+        title: "提利昂在鹰巢城受审",
+        time: "A.C. 298，原著第一卷",
+        place: "鹰巢城",
+        coord: placeCoords.eyrie.coord,
+        category: "POV 路线",
+        related: "提利昂、凯特琳、莱莎·艾林、布隆、谷地骑士",
+        summary: "凯特琳把提利昂带到鹰巢城，提利昂要求比武审判并借布隆胜出脱身。",
+        impact: "提利昂的 POV 线证明他能靠语言、法律缝隙和临场结盟逃出死局。"
+      },
+      {
+        id: "bran-fall",
+        title: "布兰坠塔",
+        time: "A.C. 298",
+        place: "临冬城",
+        coord: [1998, 500],
+        category: "阴谋",
+        related: "布兰、詹姆、瑟曦、史塔克家族",
+        summary: "布兰撞见兰尼斯特秘密后被推下塔楼。",
+        impact: "史塔克与兰尼斯特的私人仇怨迅速政治化。"
+      },
+      {
+        id: "bran-three-eyed-dream",
+        title: "布兰梦见三眼乌鸦",
+        time: "A.C. 298，原著第一卷",
+        place: "临冬城",
+        coord: placeCoords.winterfell.coord,
+        category: "POV 路线",
+        related: "布兰·史塔克、三眼乌鸦、罗柏、凯特琳",
+        summary: "布兰昏迷期间反复梦见三眼乌鸦，醒来后失去行走能力，却开始显露易形与绿先知线索。",
+        impact: "布兰的路线从继承人训练转向旧神、心树与北方神秘传统。"
+      },
+      {
+        id: "ned-arrest",
+        title: "艾德被捕",
+        time: "A.C. 298",
+        place: "君临红堡",
+        coord: [888, 712],
+        category: "政变",
+        related: "艾德·史塔克、瑟曦、乔佛里、培提尔",
+        summary: "艾德试图揭露王位继承真相，却遭金袍子背叛。",
+        impact: "史塔克失去首都政治主动权，北境准备战争。"
+      },
+      {
+        id: "ned-execution",
+        title: "贝勒大圣堂处刑",
+        time: "A.C. 298",
+        place: "君临贝勒大圣堂",
+        coord: [884, 724],
+        category: "处刑",
+        related: "艾德·史塔克、乔佛里、珊莎、艾莉亚",
+        summary: "乔佛里违背政治交易，公开处死艾德。",
+        impact: "北境彻底反叛，罗柏被拥立为北境之王。"
+      },
+      {
+        id: "sansa-hostage-kings-landing",
+        title: "珊莎滞留君临",
+        time: "A.C. 298-299，原著第一至二卷",
+        place: "君临红堡",
+        coord: placeCoords.kingsLanding.coord,
+        category: "POV 路线",
+        related: "珊莎、乔佛里、瑟曦、猎狗、提利昂",
+        summary: "艾德死后，珊莎被兰尼斯特扣在君临，被迫学习宫廷礼仪、谎言和求生策略。",
+        impact: "珊莎的 POV 线从骑士歌谣破碎，转向对权力、恐惧和表演的长期观察。"
+      },
+      {
+        id: "arya-yoren-kingsroad",
+        title: "艾莉亚随尤伦北逃",
+        time: "A.C. 298，原著第一至二卷",
+        place: "国王大道北段",
+        coord: placeCoords.kingsroadNorth.coord,
+        category: "POV 路线",
+        related: "艾莉亚、尤伦、詹德利、热派、守夜人新兵",
+        summary: "艾德被处死后，尤伦把艾莉亚伪装成男孩带出君临，沿国王大道向北撤离。",
+        impact: "艾莉亚的 POV 线离开贵族身份保护，进入战乱道路与平民视角。"
+      },
+      {
+        id: "robb-king",
+        title: "罗柏称王",
+        time: "A.C. 298",
+        place: "奔流城",
+        coord: [1208, 515],
+        category: "加冕",
+        related: "罗柏·史塔克、北境诸侯、河间诸侯",
+        summary: "北境与河间地诸侯拥立罗柏为北境与三叉戟之王。",
+        impact: "七国秩序裂解，五王之战进入公开阶段。"
+      },
+      {
+        id: "whispering-wood",
+        title: "呓语森林之战",
+        time: "五王之战，A.C. 298",
+        place: "奔流城附近",
+        coord: [1232, 486],
+        category: "伏击",
+        related: "罗柏、詹姆、灰风、北境骑兵",
+        summary: "罗柏设伏击败兰尼斯特军并俘虏詹姆。",
+        impact: "少狼主声望大涨，北境获得关键人质。"
+      },
+      {
+        id: "green-fork",
+        title: "绿叉河之战",
+        time: "五王之战，A.C. 298",
+        place: "绿叉河",
+        coord: [1390, 548],
+        category: "战役",
+        related: "泰温·兰尼斯特、卢斯·波顿、提利昂",
+        summary: "北境分兵牵制泰温，主力趁机南下救援奔流城。",
+        impact: "罗柏战略机动成功，但波顿体系开始积累危险影响。"
+      },
+      {
+        id: "arya-harrenhal-cupbearer",
+        title: "艾莉亚困于赫伦堡",
+        time: "A.C. 299，原著第二卷",
+        place: "赫伦堡",
+        coord: placeCoords.harrenhal.coord,
+        category: "POV 路线",
+        related: "艾莉亚、泰温、贾昆·赫加尔、詹德利、勇士团",
+        summary: "艾莉亚被带到赫伦堡，在兰尼斯特与波顿势力之间隐姓埋名求生。",
+        impact: "她的 POV 线第一次深入河间地战争机器，死亡名单和身份伪装成为核心主题。"
+      },
+      {
+        id: "jaime-harrenhal-oath",
+        title: "詹姆在赫伦堡立誓",
+        time: "A.C. 299-300，原著第三卷",
+        place: "赫伦堡",
+        coord: placeCoords.harrenhal.coord,
+        category: "POV 路线",
+        related: "詹姆、布蕾妮、卢斯·波顿、科本",
+        summary: "詹姆失去剑手之手后在赫伦堡与布蕾妮形成复杂互信，并重新面对自己的誓言与名声。",
+        impact: "詹姆的 POV 线从傲慢的俘虏转向自我审判，也把布蕾妮的寻人路线推向河间地。"
+      },
+      {
+        id: "renly-crowned",
+        title: "蓝礼称王",
+        time: "五王之战，A.C. 298",
+        place: "高庭",
+        coord: [512, 445],
+        category: "政治联盟",
+        related: "蓝礼、玛格丽、洛拉斯、提利尔家族",
+        summary: "蓝礼凭借风暴地与河湾地支持称王，成为最具兵力优势的竞争者。",
+        impact: "提利尔正式进入王位战争核心。"
+      },
+      {
+        id: "renly-host-bitterbridge",
+        title: "蓝礼大军集结苦桥",
+        time: "五王之战，A.C. 299",
+        place: "苦桥",
+        coord: placeCoords.bitterbridge.coord,
+        category: "POV 路线",
+        related: "蓝礼、玛格丽、洛拉斯、凯特琳、布蕾妮、提利尔军",
+        summary: "蓝礼阵营在河湾地与风暴地之间展开声势浩大的南方联军，苦桥一带成为其军势移动的重要节点。",
+        impact: "蓝礼死后，这支优势兵力迅速重组，最终转向君临阵营。"
+      },
+      {
+        id: "reach-lords-renly",
+        title: "河湾地诸侯响应蓝礼",
+        time: "五王之战，A.C. 298-299",
+        place: "金树城、长桌堡、果酒厅、绿谷城",
+        coord: placeCoords.longtable.coord,
+        category: "政治联盟",
+        related: "蓝礼、提利尔家族、罗宛家族、佛索威家族、梅利维德家族、河湾地诸侯",
+        summary: "蓝礼称王后，河湾地大量领主和骑士向其阵营靠拢，金树城、长桌堡、果酒厅与绿谷城等地构成南方贵族网络的一部分。",
+        impact: "蓝礼阵营的优势并不只来自高庭，也来自河湾地密集城堡和道路体系带来的动员能力。"
+      },
+      {
+        id: "rose-road-mander-route",
+        title: "玫瑰大道与舟徒河通道",
+        time: "五王之战前后",
+        place: "玫瑰大道、舟徒河、蓝布恩河",
+        coord: placeCoords.roseRoad.coord,
+        category: "地理通道",
+        related: "高庭、苦桥、君临、河湾地军队、商旅",
+        summary: "玫瑰大道连接高庭与君临，舟徒河和蓝布恩河一带则是河湾地粮食、军队和商旅移动的重要通道。",
+        impact: "谁控制这些道路与河流，谁就更容易把河湾地的财富和兵力投送到王领。"
+      },
+      {
+        id: "ashford-tourney",
+        title: "白杨滩比武大会",
+        time: "A.C. 209，邓肯与伊戈时期",
+        place: "白杨滩",
+        coord: placeCoords.ashford.coord,
+        category: "比武大会",
+        related: "邓肯、伊戈、贝勒·破矛者、坦格利安王子、白杨滩领主",
+        summary: "白杨滩举行盛大比武，邓肯与伊戈卷入王室骑士和地方贵族的冲突。",
+        impact: "这一事件让伊戈的身份与邓肯的骑士道路正式交织，也成为《七王国的骑士》早期关键节点。"
+      },
+      {
+        id: "sam-horn-hill",
+        title: "山姆离开角陵",
+        time: "A.C. 295 前后，原著前史",
+        place: "角陵",
+        coord: placeCoords.hornHill.coord,
+        category: "POV 路线",
+        related: "山姆威尔、蓝道·塔利、塔利家族、守夜人",
+        summary: "山姆在父亲蓝道·塔利逼迫下放弃继承权，离开角陵前往长城加入守夜人。",
+        impact: "角陵是山姆威尔路线的出发点，也解释了他与守夜人、学城之间的长期关联。"
+      },
+      {
+        id: "dornish-marches-border",
+        title: "多恩边疆诸堡对峙",
+        time: "长期边疆冲突",
+        place: "多恩边疆地、黑港、夜歌城",
+        coord: placeCoords.dornishMarches.coord,
+        category: "边疆冲突",
+        related: "黑港、夜歌城、多恩边疆地、拜拉席恩家族、马泰尔家族",
+        summary: "多恩边疆地位于风暴地、河湾地与多恩之间，黑港和夜歌城等城堡长期承担边境防御与冲突压力。",
+        impact: "这片区域解释了风暴地、河湾地和多恩之间反复出现的军事与婚盟紧张。"
+      },
+      {
+        id: "catelyn-renly-parley",
+        title: "凯特琳调停拜拉席恩兄弟",
+        time: "A.C. 299，原著第二卷",
+        place: "风息堡外营地",
+        coord: placeCoords.stormlandsCamp.coord,
+        category: "POV 路线",
+        related: "凯特琳、蓝礼、史坦尼斯、布蕾妮、梅丽珊卓",
+        summary: "凯特琳代表罗柏南下斡旋，却目睹蓝礼与史坦尼斯的继承冲突走向不可调和。",
+        impact: "凯特琳和布蕾妮的 POV 线在风暴地交会，随后因魔法暗杀被迫逃离。"
+      },
+      {
+        id: "renly-death",
+        title: "蓝礼遇刺",
+        time: "五王之战，A.C. 299",
+        place: "风息堡外营地",
+        coord: [708, 850],
+        category: "魔法暗杀",
+        related: "蓝礼、史坦尼斯、梅丽珊卓、凯特琳、布蕾妮",
+        summary: "蓝礼在即将与史坦尼斯交战前被影子杀死。",
+        impact: "风暴地军力重组，提利尔转向君临阵营。"
+      },
+      {
+        id: "blackwater",
+        title: "黑水河之战",
+        time: "五王之战，A.C. 299",
+        place: "君临黑水湾",
+        coord: [878, 742],
+        category: "围城战",
+        related: "史坦尼斯、提利昂、戴佛斯、泰温、提利尔军、野火",
+        summary: "史坦尼斯舰队攻打君临，野火与援军扭转战局。",
+        impact: "兰尼斯特保住铁王座，提利尔成为王都新盟友。"
+      },
+      {
+        id: "davos-dragonstone-counsel",
+        title: "戴佛斯重返龙石岛",
+        time: "A.C. 299-300，原著第三至五卷",
+        place: "龙石岛",
+        coord: placeCoords.dragonstone.coord,
+        category: "POV 路线",
+        related: "戴佛斯、史坦尼斯、梅丽珊卓、希琳、赛丽丝",
+        summary: "黑水河惨败后，戴佛斯在龙石岛继续劝谏史坦尼斯，试图把国王从复仇和献祭中拉回政治现实。",
+        impact: "戴佛斯的 POV 线把拜拉席恩阵营从海战失败带向北境求援和继承合法性问题。"
+      },
+      {
+        id: "theon-returns-pyke",
+        title: "席恩返回派克城",
+        time: "A.C. 299，原著第二卷",
+        place: "派克城",
+        coord: placeCoords.pyke.coord,
+        category: "POV 路线",
+        related: "席恩、巴隆·葛雷乔伊、阿莎、葛雷乔伊家族",
+        summary: "席恩奉罗柏之命回铁群岛谈判，却在父亲与铁民文化面前重新选择身份。",
+        impact: "席恩的 POV 线从北境养子转向铁民继承焦虑，直接引出临冬城危机。"
+      },
+      {
+        id: "winterfell-sack",
+        title: "临冬城陷落",
+        time: "五王之战，A.C. 299",
+        place: "临冬城",
+        coord: [1998, 500],
+        category: "城堡陷落",
+        related: "席恩、卢斯·波顿、拉姆斯、布兰、瑞肯",
+        summary: "席恩占领临冬城，随后城堡被焚毁。",
+        impact: "北境政治中心崩塌，波顿家族乘势崛起。"
+      },
+      {
+        id: "bran-nightfort-passage",
+        title: "布兰穿越长夜堡",
+        time: "A.C. 299，原著第三卷",
+        place: "长夜堡",
+        coord: placeCoords.nightfort.coord,
+        category: "POV 路线",
+        related: "布兰·史塔克、霍多尔、梅拉、玖健、山姆威尔",
+        summary: "布兰一行沿废弃城堡长夜堡越过长城，并与山姆威尔短暂相遇。",
+        impact: "布兰的 POV 线正式离开七国政治地图，走向长城以北的旧神源头。"
+      },
+      {
+        id: "sam-fist-first-men",
+        title: "山姆经历先民拳峰惨败",
+        time: "A.C. 299，原著第三卷",
+        place: "先民拳峰",
+        coord: placeCoords.fistFirstMen.coord,
+        category: "POV 路线",
+        related: "山姆威尔、守夜人、异鬼、尸鬼、杰奥·莫尔蒙",
+        summary: "守夜人远征军在先民拳峰遭异鬼与尸鬼袭击，山姆威尔从胆怯新兵被迫直面北方真相。",
+        impact: "山姆威尔的 POV 线成为读者理解异鬼威胁和守夜人衰败的关键窗口。"
+      },
+      {
+        id: "sam-crasters-keep-mutiny",
+        title: "卡斯特堡垒哗变",
+        time: "A.C. 299，原著第三卷",
+        place: "卡斯特堡垒",
+        coord: placeCoords.crastersKeep.coord,
+        category: "POV 路线",
+        related: "山姆威尔、吉莉、守夜人叛徒、杰奥·莫尔蒙",
+        summary: "守夜人撤退至卡斯特堡垒后爆发哗变，山姆威尔带吉莉逃离混乱。",
+        impact: "山姆威尔从旁观幸存者转为主动保护者，并把长城以北的秘密带回黑城堡。"
+      },
+      {
+        id: "red-wedding",
+        title: "血色婚礼",
+        time: "A.C. 299",
+        place: "孪河城",
+        coord: [1445, 496],
+        category: "背叛",
+        related: "罗柏、凯特琳、瓦德·佛雷、卢斯·波顿、泰温",
+        summary: "佛雷与波顿在婚宴中屠杀史塔克主力与北境贵族。",
+        impact: "北境战争失败，兰尼斯特短期内重建王权优势。"
+      },
+      {
+        id: "arya-hound-riverlands",
+        title: "艾莉亚与猎狗流亡河间地",
+        time: "A.C. 299-300，原著第三卷",
+        place: "十字路口旅店",
+        coord: placeCoords.crossroadsInn.coord,
+        category: "POV 路线",
+        related: "艾莉亚、桑铎·克里冈、波利佛、河间地平民",
+        summary: "血色婚礼后，艾莉亚与猎狗在河间地游荡，逐渐看见战争对普通人的撕裂。",
+        impact: "艾莉亚的 POV 线从回家愿望坠入复仇、身份消解和离开维斯特洛的前奏。"
+      },
+      {
+        id: "catelyn-lady-stoneheart",
+        title: "石心夫人现身河间地",
+        time: "A.C. 300，原著第三卷尾声",
+        place: "孪河城附近",
+        coord: placeCoords.twins.coord,
+        category: "POV 路线",
+        related: "凯特琳、石心夫人、贝里·唐德利恩、无旗兄弟会、佛雷家族",
+        summary: "凯特琳死后以石心夫人的形态归来，带领无旗兄弟会审判参与血色婚礼者。",
+        impact: "凯特琳的 POV 虽在血色婚礼中终止，但她的复仇阴影继续笼罩河间地。"
+      },
+      {
+        id: "purple-wedding",
+        title: "紫色婚礼",
+        time: "A.C. 300",
+        place: "君临",
+        coord: [888, 712],
+        category: "宫廷谋杀",
+        related: "乔佛里、提利昂、珊莎、奥莲娜、培提尔",
+        summary: "乔佛里在婚宴上中毒身亡，提利昂被指控弑君。",
+        impact: "兰尼斯特内部权力结构震荡，珊莎逃离君临。"
+      },
+      {
+        id: "sansa-alayne-eyrie",
+        title: "珊莎化名阿莲石东",
+        time: "A.C. 300，原著第三至四卷",
+        place: "鹰巢城",
+        coord: placeCoords.eyrie.coord,
+        category: "POV 路线",
+        related: "珊莎、培提尔·贝里席、莱莎·艾林、谷地诸侯",
+        summary: "珊莎逃离君临后在谷地化名阿莲石东，开始学习培提尔式的宫廷操盘。",
+        impact: "珊莎的 POV 线从被动人质转为观察者和潜在玩家，谷地成为她的新棋盘。"
+      },
+      {
+        id: "tyrion-trial",
+        title: "比武审判",
+        time: "A.C. 300",
+        place: "君临",
+        coord: [888, 712],
+        category: "审判",
+        related: "提利昂、奥柏伦、魔山、泰温",
+        summary: "奥柏伦代表提利昂出战魔山，几乎获胜却被反杀。",
+        impact: "多恩与兰尼斯特仇恨再燃，提利昂走向弑父与流亡。"
+      },
+      {
+        id: "tyrion-escape-kills-tywin",
+        title: "提利昂逃出红堡",
+        time: "A.C. 300，原著第三卷",
+        place: "君临红堡",
+        coord: placeCoords.kingsLanding.coord,
+        category: "POV 路线",
+        related: "提利昂、詹姆、瓦里斯、泰温、雪伊",
+        summary: "詹姆与瓦里斯协助提利昂逃狱，提利昂在离开前杀死雪伊和泰温。",
+        impact: "提利昂与兰尼斯特家族彻底决裂，随后流亡东大陆寻找新的政治出口。"
+      },
+      {
+        id: "cersei-faith-militant",
+        title: "瑟曦重启教会武装",
+        time: "A.C. 300，原著第四卷",
+        place: "君临",
+        coord: placeCoords.kingsLanding.coord,
+        category: "POV 路线",
+        related: "瑟曦、七神教会、大麻雀、御前会议、玛格丽",
+        summary: "瑟曦为了短期制衡提利尔与解决王室债务，允许七神教会恢复武装力量。",
+        impact: "瑟曦的 POV 线展示她把宫廷小胜转化为制度性灾难的过程。"
+      },
+      {
+        id: "brienne-riverlands-search",
+        title: "布蕾妮搜寻珊莎",
+        time: "A.C. 300，原著第四卷",
+        place: "河间地道路",
+        coord: placeCoords.crossroadsInn.coord,
+        category: "POV 路线",
+        related: "布蕾妮、波德瑞克、珊莎、詹姆、无旗兄弟会",
+        summary: "布蕾妮带着詹姆的誓言进入河间地，寻找失踪的珊莎与艾莉亚。",
+        impact: "布蕾妮的 POV 线把战争后的维斯特洛从王侯战场拉回破败乡路。"
+      },
+      {
+        id: "jaime-riverrun-siege",
+        title: "詹姆和平接收奔流城",
+        time: "A.C. 300，原著第四卷",
+        place: "奔流城",
+        coord: placeCoords.riverrun.coord,
+        category: "POV 路线",
+        related: "詹姆、艾德慕·徒利、布林登·徒利、兰尼斯特军",
+        summary: "詹姆奉命解决奔流城围困，最终通过威胁与谈判迫使城堡开门。",
+        impact: "詹姆的 POV 线继续追问“守誓”与“胜利”之间的灰色地带。"
+      },
+      {
+        id: "sam-arrives-oldtown",
+        title: "山姆抵达旧镇学城",
+        time: "A.C. 300，原著第四卷",
+        place: "旧镇",
+        coord: placeCoords.oldtown.coord,
+        category: "POV 路线",
+        related: "山姆威尔、吉莉、伊蒙学士、学城、海塔尔",
+        summary: "山姆威尔护送伊蒙学士南下，最终抵达旧镇，准备进入学城学习。",
+        impact: "山姆威尔的 POV 线把长城的警讯送到知识中心，也把旧镇卷入终局阴影。"
+      },
+      {
+        id: "kingsmoot-pyke",
+        title: "铁群岛王选会",
+        time: "A.C. 300，原著第四卷",
+        place: "派克城",
+        coord: placeCoords.pyke.coord,
+        category: "POV 路线",
+        related: "阿莎、湿发伊伦、维克塔利昂、攸伦、铁民",
+        summary: "巴隆死后，铁民在古道传统下召开王选会，阿莎、维克塔利昂与攸伦争夺方向。",
+        impact: "铁群岛 POV 线从席恩个人身份危机扩展为群岛政治和海权路线之争。"
+      },
+      {
+        id: "asha-deepwood-motte",
+        title: "阿莎据守深林堡",
+        time: "A.C. 300，原著第五卷",
+        place: "深林堡",
+        coord: placeCoords.deepwoodMotte.coord,
+        category: "POV 路线",
+        related: "阿莎、史坦尼斯、北境山地氏族、葛雷乔伊铁民",
+        summary: "阿莎在北境占据深林堡，却被史坦尼斯与北境山地氏族击败俘虏。",
+        impact: "阿莎的 POV 线把铁群岛入侵北境的代价具体化。"
+      },
+      {
+        id: "aeron-drowned-god-sermon",
+        title: "湿发伊伦召集铁民",
+        time: "A.C. 300，原著第四卷",
+        place: "派克城",
+        coord: placeCoords.pyke.coord,
+        category: "POV 路线",
+        related: "湿发伊伦、维克塔利昂、阿莎、淹神信仰、铁民",
+        summary: "湿发伊伦以淹神祭司身份反对世俗权谋，试图让铁民按古老传统选择国王。",
+        impact: "伊伦的 POV 线把铁群岛政治和宗教狂热绑在一起。"
+      },
+      {
+        id: "victarion-iron-fleet",
+        title: "维克塔利昂整备铁舰队",
+        time: "A.C. 300，原著第四至五卷",
+        place: "铁群岛",
+        coord: placeCoords.pyke.coord,
+        category: "POV 路线",
+        related: "维克塔利昂、攸伦、阿莎、铁舰队",
+        summary: "维克塔利昂在王选会后接过铁舰队使命，表面执行攸伦计划，内心却积累背叛念头。",
+        impact: "维克塔利昂的 POV 线把铁群岛路线从本土争权推向远海扩张。"
+      },
+      {
+        id: "arianne-queenmaker",
+        title: "亚莲恩密谋拥立弥赛菈",
+        time: "A.C. 300，原著第四卷",
+        place: "绿血河",
+        coord: placeCoords.greenblood.coord,
+        category: "POV 路线",
+        related: "亚莲恩、亚利欧、弥赛菈、阿利斯·奥克赫特、多恩",
+        summary: "亚莲恩试图利用多恩继承法拥立弥赛菈，迫使多恩公开反兰尼斯特。",
+        impact: "亚莲恩的 POV 线揭开多恩宫廷的继承焦虑与马泰尔复仇计划。"
+      },
+      {
+        id: "areo-queenmaker-arrest",
+        title: "亚利欧截停女王阴谋",
+        time: "A.C. 300，原著第四卷",
+        place: "绿血河",
+        coord: placeCoords.greenblood.coord,
+        category: "POV 路线",
+        related: "亚利欧、亚莲恩、道朗·马泰尔、弥赛菈、阿利斯·奥克赫特",
+        summary: "亚利欧奉道朗命令拦截亚莲恩一行，女王阴谋以流血和逮捕收场。",
+        impact: "亚利欧的 POV 线让读者从侍卫视角看到多恩权谋的克制与残酷。"
+      },
+      {
+        id: "quentyn-secret-pact",
+        title: "昆廷接受秘密婚约使命",
+        time: "A.C. 300，原著第五卷前史",
+        place: "阳戟城",
+        coord: placeCoords.sunspear.coord,
+        category: "POV 路线",
+        related: "昆廷、道朗·马泰尔、亚莲恩、多恩",
+        summary: "昆廷被道朗派往东方，试图以旧日婚约把丹妮莉丝和多恩联盟起来。",
+        impact: "昆廷的 POV 线从多恩出发，承担马泰尔家族迟到而危险的复仇方案。"
+      },
+      {
+        id: "quentyn-leaves-dorne",
+        title: "昆廷离开多恩",
+        time: "A.C. 300，原著第五卷",
+        place: "绿血河 / 板条镇",
+        coord: placeCoords.greenblood.coord,
+        category: "POV 路线",
+        related: "昆廷、格里斯、亚莲恩、马泰尔家族",
+        summary: "昆廷一行从多恩秘密启程，穿过商路与海路前往丹妮莉丝所在的东方。",
+        impact: "昆廷的地图路线在维斯特洛边缘断开，提示原著 POV 已扩展到当前底图之外。"
+      },
+      {
+        id: "jon-queenscrown-choice",
+        title: "琼恩在后冠镇暴露立场",
+        time: "A.C. 299，原著第三卷",
+        place: "后冠镇",
+        coord: placeCoords.queenscrown.coord,
+        category: "POV 路线",
+        related: "琼恩、耶哥蕊特、野人、守夜人",
+        summary: "琼恩随野人南下时在后冠镇拒绝杀害无辜老人，守夜人身份与野人情感正面冲突。",
+        impact: "琼恩的 POV 线把个人忠诚、爱情和誓言推到同一个节点上。"
+      },
+      {
+        id: "bran-cave-three-eyed-crow",
+        title: "布兰抵达三眼乌鸦洞穴",
+        time: "A.C. 300，原著第五卷",
+        place: "长城以北",
+        coord: placeCoords.hardhome.coord,
+        category: "POV 路线",
+        related: "布兰·史塔克、三眼乌鸦、森林之子、霍多尔、梅拉",
+        summary: "布兰一行穿越长城以北荒野，最终进入三眼乌鸦与森林之子的洞穴。",
+        impact: "布兰的 POV 线彻底转入记忆、心树网络和古老魔法。"
+      },
+      {
+        id: "davos-white-harbor-mission",
+        title: "戴佛斯出使白港",
+        time: "A.C. 300，原著第五卷",
+        place: "白港",
+        coord: placeCoords.whiteHarbor.coord,
+        category: "POV 路线",
+        related: "戴佛斯、曼德勒家族、史坦尼斯、瑞肯·史塔克",
+        summary: "戴佛斯奉史坦尼斯之命争取白港，却被卷入曼德勒家族对佛雷与波顿的隐秘复仇。",
+        impact: "戴佛斯的 POV 线从君王顾问变成北境政治真相的侦听者。"
+      },
+      {
+        id: "hardhome",
+        title: "艰难屯惨败",
+        time: "A.C. 300 左右",
+        place: "长城以北艰难屯",
+        coord: [2520, 760],
+        category: "异鬼威胁",
+        related: "琼恩·雪诺、野人、异鬼、尸鬼大军",
+        summary: "守夜人与野人撤离行动遭异鬼袭击，大量自由民被转化为尸鬼。",
+        impact: "长城以北的威胁从传说变成迫在眉睫的战争。"
+      },
+      {
+        id: "jon-assassination",
+        title: "琼恩遇刺",
+        time: "A.C. 300",
+        place: "黑城堡",
+        coord: [2318, 596],
+        category: "守夜人内乱",
+        related: "琼恩、守夜人叛徒、梅丽珊卓、野人",
+        summary: "琼恩因接纳野人与政治决策遭守夜人同袍刺杀。",
+        impact: "守夜人秩序崩裂，北境与长城防务进入真空。"
+      },
+      {
+        id: "battle-bastards",
+        title: "私生子之战",
+        time: "A.C. 300 以后",
+        place: "临冬城外",
+        coord: [1980, 492],
+        category: "北境决战",
+        related: "琼恩、珊莎、拉姆斯、谷地骑士、野人",
+        summary: "史塔克残余势力与波顿决战，谷地骑士及时抵达改变战局。",
+        impact: "史塔克夺回临冬城，北境政治合法性重新洗牌。"
+      },
+      {
+        id: "wall-falls",
+        title: "长城破裂",
+        time: "长夜前夕",
+        place: "东海望",
+        coord: [2250, 980],
+        category: "灾变",
+        related: "夜王、尸龙、守夜人、野人",
+        summary: "尸龙摧毁长城一段，异鬼大军进入维斯特洛。",
+        impact: "八千年的北方屏障失效，南方战争被迫让位于生存战争。"
+      },
+      {
+        id: "long-night-winterfell",
+        title: "临冬城长夜之战",
+        time: "长夜",
+        place: "临冬城",
+        coord: [1998, 500],
+        category: "终局战",
+        related: "艾莉亚、布兰、琼恩、丹妮莉丝、夜王、北境联军",
+        summary: "北境联军在临冬城抵御异鬼，艾莉亚刺杀夜王。",
+        impact: "异鬼威胁终结，但北境与盟军付出惨重代价。"
+      },
+      {
+        id: "daenerys-landing",
+        title: "丹妮莉丝登陆龙石岛",
+        time: "A.C. 300 以后",
+        place: "龙石岛",
+        coord: [956, 940],
+        category: "回归",
+        related: "丹妮莉丝、提利昂、瓦里斯、无垢者、多斯拉克",
+        summary: "丹妮莉丝率军返回维斯特洛，以龙石岛作为夺回铁王座的基地。",
+        impact: "坦格利安势力重返本土，七国战争进入龙与火的新阶段。"
+      },
+      {
+        id: "fall-highgarden",
+        title: "高庭陷落",
+        time: "A.C. 300 以后",
+        place: "高庭",
+        coord: [512, 445],
+        category: "战役",
+        related: "詹姆、奥莲娜、兰尼斯特军、提利尔家族",
+        summary: "兰尼斯特军攻陷高庭，奥莲娜临死前承认毒杀乔佛里。",
+        impact: "提利尔主支终结，兰尼斯特获得急需的财富。"
+      },
+      {
+        id: "loot-train",
+        title: "战利品车队之战",
+        time: "A.C. 300 以后",
+        place: "黑水河以西",
+        coord: [820, 620],
+        category: "龙焰战",
+        related: "丹妮莉丝、卓耿、詹姆、布隆、多斯拉克",
+        summary: "丹妮莉丝率龙与多斯拉克袭击兰尼斯特车队。",
+        impact: "维斯特洛军队第一次直面成熟巨龙与草原骑兵的联合冲击。"
+      },
+      {
+        id: "fall-kings-landing",
+        title: "君临焚城",
+        time: "终局战争",
+        place: "君临",
+        coord: [888, 712],
+        category: "城市毁灭",
+        related: "丹妮莉丝、瑟曦、琼恩、灰虫子、卓耿",
+        summary: "君临投降钟声响起后仍遭龙焰摧毁，大量平民死亡。",
+        impact: "丹妮莉丝的统治合法性崩塌，铁王座时代走向终结。"
+      }
+    ];
+
+    applyPlaceCoordinateLibrary();
+    const termRegistry = buildTermRegistry();
+    const linkableTerms = Object.keys(termRegistry)
+      .filter((term) => term.length > 1)
+      .sort((a, b) => b.length - a.length);
+
+    const map = L.map("map", {
+      crs: L.CRS.Simple,
+      minZoom: -2.35,
+      maxZoom: 1.45,
+      zoomSnap: 0.1,
+      zoomDelta: 0.5,
+      wheelPxPerZoomLevel: 80,
+      zoomAnimation: true,
+      fadeAnimation: true,
+      markerZoomAnimation: true,
+      inertia: true,
+      maxBounds: imageBounds,
+      maxBoundsViscosity: 0.86
+    });
+
+    const translationPane = map.createPane("translation-labels");
+    translationPane.style.zIndex = 420;
+    translationPane.style.pointerEvents = "none";
+
+    const mapOverlay = L.imageOverlay(MAP_URL, imageBounds, {
+      className: "realistic-map",
+      alt: "High-resolution map of Westeros"
+    }).addTo(map);
+
+    mapOverlay.on("error", () => {
+      const message = "地图图片加载失败：请检查 MAP_URL，或确认 Map_of_westeros_CN.jpg 与 HTML 在同一目录。";
+      L.popup({ closeButton: false, autoClose: false })
+        .setLatLng([IMAGE_SIZE.height / 2, IMAGE_SIZE.width / 2])
+        .setContent(`<b>ImageOverlay Error</b><br>${message}`)
+        .openOn(map);
+    });
+
+    map.fitBounds(imageBounds, {
+      padding: [18, 18],
+      animate: false
+    });
+
+    map.setMaxBounds(imageBounds);
+
+    L.control.zoom({ position: "topright" }).addTo(map);
+
+    castles.forEach((castle) => {
+      const house = houses[castle.houseId];
+      L.marker(castle.coord, {
+        icon: createCastleIcon(castle, house),
+        title: `${castle.name} - ${house.name}`,
+        riseOnHover: true
+      })
+        .addTo(map)
+        .bindPopup(`<b>${linkifyTerms(castle.name)}</b><br>${linkifyTerms(house.name)}`);
+    });
+
+    if (SHOW_TRANSLATION_LABELS) {
+      mapLabels.forEach((label) => {
+        L.marker(label.coord, {
+          pane: "translation-labels",
+          interactive: false,
+          icon: createMapLabelIcon(label)
+        }).addTo(map);
+      });
+    }
+
+    const eventMarkers = new Map();
+
+    majorEvents.forEach((event) => {
+      event.displayCoord = getOffsetEventCoord(event);
+
+      const marker = L.marker(event.displayCoord, {
+        icon: createEventIcon(event, false),
+        title: event.title,
+        zIndexOffset: 900,
+        riseOnHover: true
+      })
+        .addTo(map)
+        .bindPopup(getEventPopupHtml(event));
+
+      marker.on("click", () => selectEvent(event.id, { fly: false, openPopup: false }));
+      eventMarkers.set(event.id, { marker, event });
+    });
+
+    renderLegend();
+    renderEventList();
+    setupTermInteractions();
+    setupMobileControls();
+    resetAppState({ animate: false });
+
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        resetAppState({ animate: false });
+      }
+    });
+
+    if (DEMO_MODE) {
+      document.body.classList.add("demo-mode");
+      setTimeout(startGuidedDemo, 850);
+    }
+
+    function createCastleIcon(castle, house) {
+      return L.divIcon({
+        className: "castle-marker",
+        iconSize: [76, 72],
+        iconAnchor: [38, 58],
+        popupAnchor: [0, -52],
+        html: `
+          <div class="castle-icon" style="--house-color:${house.color};--house-light:${house.light};--crest-color:${house.crestColor}">
+            <span class="castle-crest">${house.crest}</span>
+          </div>
+          <span class="castle-label">${castle.name}</span>
+        `
+      });
+    }
+
+    function createMapLabelIcon(label) {
+      return L.divIcon({
+        className: `map-label ${label.type || ""}`,
+        iconSize: [120, 24],
+        iconAnchor: [60, 12],
+        html: label.text
+      });
+    }
+
+    function applyPlaceCoordinateLibrary() {
+      const castlePlaceByHouse = {
+        stark: "winterfell",
+        nightswatch: "castleBlack",
+        lannister: "casterlyRock",
+        tully: "riverrun",
+        greyjoy: "pyke",
+        arryn: "eyrie",
+        throne: "kingsLanding",
+        targaryen: "dragonstone",
+        baratheon: "stormsEnd",
+        tyrell: "highgarden",
+        hightower: "oldtown",
+        martell: "sunspear"
+      };
+
+      castles.forEach((castle) => {
+        castle.placeKey = castlePlaceByHouse[castle.houseId];
+        castle.coord = getPlaceCoord(castle.placeKey, castle.coord);
+      });
+
+      majorEvents.forEach((event) => {
+        event.locationKey = event.locationKey || inferEventPlaceKey(event);
+        event.coord = getPlaceCoord(event.locationKey, event.coord);
+      });
+    }
+
+    function getPlaceCoord(placeKey, fallback) {
+      return placeCoords[placeKey]?.coord || fallback;
+    }
+
+    function createEventIcon(event, active) {
+      const visual = getCategoryVisual(event.category);
+      return L.divIcon({
+        className: `event-marker${active ? " active" : ""}`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+        popupAnchor: [0, -10],
+        html: `<div class="event-token" style="--event-color:${visual.color};--event-light:${visual.light}" title="${event.title}"></div>`
+      });
+    }
+
+    function getCategoryVisual(category) {
+      const visuals = {
+        "征服战争": { symbol: "龙", color: "#7d1d24", light: "#c13b35" },
+        "决战": { symbol: "战", color: "#8f2d24", light: "#d96a32" },
+        "龙焰": { symbol: "焰", color: "#7d1d24", light: "#e1782d" },
+        "政治转折": { symbol: "冠", color: "#5f3e1f", light: "#d0a84e" },
+        "抵抗": { symbol: "盾", color: "#9a5b23", light: "#d99a3d" },
+        "宗教战争": { symbol: "星", color: "#4b3a26", light: "#d6c18a" },
+        "治理": { symbol: "路", color: "#315b45", light: "#88a768" },
+        "继承危机": { symbol: "冠", color: "#4a2b44", light: "#9a6a91" },
+        "内战导火索": { symbol: "裂", color: "#792b2f", light: "#c65a56" },
+        "龙战": { symbol: "龙", color: "#23395f", light: "#5c8fc5" },
+        "城市暴乱": { symbol: "城", color: "#593021", light: "#b16438" },
+        "联姻": { symbol: "誓", color: "#7c4d28", light: "#d6a25e" },
+        "王朝战争": { symbol: "旗", color: "#7d1f2a", light: "#c54752" },
+        "阴谋": { symbol: "影", color: "#202126", light: "#6b6b74" },
+        "王室灾难": { symbol: "火", color: "#6f241d", light: "#d86b34" },
+        "王权危机": { symbol: "冠", color: "#5b3a20", light: "#c89d4b" },
+        "政治风暴": { symbol: "眼", color: "#26334d", light: "#6d86b5" },
+        "导火索": { symbol: "火", color: "#7b2a1d", light: "#dc6b31" },
+        "暴政": { symbol: "斧", color: "#311a1b", light: "#8c3434" },
+        "战役": { symbol: "战", color: "#843023", light: "#cc6b38" },
+        "城市陷落": { symbol: "城", color: "#4b2a20", light: "#a65c35" },
+        "秘密": { symbol: "密", color: "#25272e", light: "#717889" },
+        "叛乱": { symbol: "旗", color: "#3a3e45", light: "#7b828d" },
+        "政变": { symbol: "冠", color: "#4a2b34", light: "#a55a62" },
+        "处刑": { symbol: "剑", color: "#3a1d1d", light: "#9e3a32" },
+        "加冕": { symbol: "冠", color: "#73561f", light: "#d9b84a" },
+        "伏击": { symbol: "弓", color: "#293821", light: "#74904c" },
+        "政治联盟": { symbol: "盟", color: "#2f5e38", light: "#7aa45f" },
+        "魔法暗杀": { symbol: "影", color: "#22202c", light: "#785c9c" },
+        "围城战": { symbol: "城", color: "#7d4a22", light: "#d79a46" },
+        "城堡陷落": { symbol: "堡", color: "#4b2d21", light: "#a7653b" },
+        "背叛": { symbol: "刃", color: "#5a151a", light: "#b73336" },
+        "宫廷谋杀": { symbol: "毒", color: "#3f5220", light: "#8caa3e" },
+        "审判": { symbol: "秤", color: "#40362a", light: "#b69a65" },
+        "异鬼威胁": { symbol: "冰", color: "#173a4a", light: "#79b9d0" },
+        "守夜人内乱": { symbol: "夜", color: "#111315", light: "#464f56" },
+        "北境决战": { symbol: "狼", color: "#4d5358", light: "#9da7ad" },
+        "灾变": { symbol: "裂", color: "#18323c", light: "#78b6cc" },
+        "终局战": { symbol: "夜", color: "#151923", light: "#59657b" },
+        "回归": { symbol: "龙", color: "#61131d", light: "#b2333d" },
+        "龙焰战": { symbol: "焰", color: "#7b2318", light: "#df7430" },
+        "城市毁灭": { symbol: "火", color: "#61131d", light: "#d45c2d" }
+      };
+
+      return visuals[category] || { symbol: "事", color: "#5b4328", light: "#a77a3f" };
+    }
+
+    function inferEventPlaceKey(event) {
+      const haystack = `${event.title} ${event.place}`;
+      const explicitRules = [
+        ["fieldOfFire", ["怒火燎原", "河湾地北部平原"]],
+        ["harrenhal", ["赫伦堡大议会", "赫伦堡比武", "赫伦堡焚毁"]],
+        ["godsEye", ["神眼湖上空", "神眼湖 / 赫伦堡"]],
+        ["kingsLanding", ["君临", "红堡", "贝勒大圣堂", "龙穴", "黑水河口"]],
+        ["blackwaterBay", ["黑水河之战", "黑水湾"]],
+        ["stormlandsCamp", ["蓝礼遇刺", "风息堡外营地"]],
+        ["towerOfJoy", ["极乐塔", "多恩红色山脉"]],
+        ["lootTrain", ["战利品车队", "黑水河以西"]],
+        ["hardhome", ["艰难屯", "长城以北"]],
+        ["eastwatch", ["长城破裂", "东海望"]],
+        ["winterfell", ["临冬城", "私生子之战", "长夜之战", "布兰坠塔"]],
+        ["castleBlack", ["黑城堡", "琼恩遇刺"]],
+        ["sunspear", ["阳戟城", "多恩拒降", "多恩和平并入"]],
+        ["boneway", ["骨路"]],
+        ["pyke", ["派克城", "葛雷乔伊叛乱"]],
+        ["riverrun", ["奔流城", "罗柏称王"]],
+        ["twins", ["孪河城", "血色婚礼"]],
+        ["whisperingWood", ["呓语森林"]],
+        ["greenFork", ["绿叉河"]],
+        ["stoneSept", ["石堂镇", "鸣钟之战"]],
+        ["highgarden", ["高庭", "蓝礼称王", "高庭陷落"]],
+        ["oldtown", ["旧镇"]],
+        ["casterlyRock", ["凯岩城"]],
+        ["eyrie", ["鹰巢城", "谷地"]],
+        ["dragonstone", ["龙石岛"]],
+        ["stormsEnd", ["风息堡"]],
+        ["summerhall", ["盛夏厅"]],
+        ["duskendale", ["暮谷镇"]],
+        ["whitewalls", ["白墙城"]],
+        ["redgrassField", ["红草原"]]
+      ];
+
+      const matchedRule = explicitRules.find(([, aliases]) => aliases.some((alias) => haystack.includes(alias)));
+      if (matchedRule) return matchedRule[0];
+
+      const matchedPlace = Object.entries(placeCoords).find(([, place]) => {
+        return place.aliases.some((alias) => haystack.includes(alias));
+      });
+
+      return matchedPlace?.[0] || null;
+    }
+
+    function buildTermRegistry() {
+      const registry = {};
+      const upsertTerm = (term, data = {}) => {
+        if (!term) return;
+        registry[term] = {
+          title: term,
+          type: "词条",
+          description: "这是维斯特洛历史地图中的可点击词条。",
+          ...(registry[term] || {}),
+          ...data
+        };
+      };
+
+      Object.entries(houses).forEach(([houseId, house]) => {
+        const seats = castles.filter((castle) => castle.houseId === houseId).map((castle) => castle.name).join("、");
+        upsertTerm(house.name, {
+          type: "家族 / 势力",
+          description: `${house.name}是维斯特洛的重要势力之一${seats ? `，地图上标注的核心据点为${seats}` : ""}。它的徽记在地图上用对应颜色的城堡图标表示。`
+        });
+      });
+
+      getMapPlaceEntries().forEach((place) => {
+        const events = getEventsForPlaceEntry(place);
+        const eventText = getPlaceEventText(events);
+        const baseDescription = `${place.name}是当前中文底图上标注的${place.typeLabel}。${eventText}`;
+        upsertTerm(place.name, {
+          title: place.name,
+          type: place.typeLabel,
+          coord: place.coord,
+          eventId: events[0]?.id,
+          description: baseDescription
+        });
+
+        place.aliases.forEach((alias) => {
+          upsertTerm(alias, {
+            title: place.name,
+            type: place.typeLabel,
+            coord: place.coord,
+            eventId: events[0]?.id,
+            description: `${alias}对应地图地点“${place.name}”。${eventText}`
+          });
+        });
+      });
+
+      Object.values(characters).forEach((person) => {
+        upsertTerm(person.name, {
+          type: "人物",
+          description: `${person.name}是事件网络中的关键人物。其出现通常意味着王权、家族继承、战争联盟或背叛关系发生变化。`
+        });
+        const shortName = person.name.split("·")[0];
+        if (shortName && shortName !== person.name) {
+          upsertTerm(shortName, {
+            title: person.name,
+            type: "人物",
+            description: `${shortName}指${person.name}，是本地图事件线索中的重要人物。`
+          });
+        }
+      });
+
+      majorEvents.forEach((event) => {
+        upsertTerm(event.title, {
+          type: "历史事件",
+          eventId: event.id,
+          coord: event.coord,
+          description: `${event.summary} 影响：${event.impact}`
+        });
+      });
+
+      const curatedGlossary = {
+        "维斯特洛": ["大陆", "《冰与火之歌》主要政治舞台，绝大多数书中 POV 的早期路线都在这里展开；地图按北境、河间地、西境、王领、谷地、河湾地、风暴地、多恩和铁群岛组织事件。"],
+        "七国": ["政治概念", "伊耿征服后形成的封建王国，名称来自征服前的七个独立王国；实际行政版图后来包含九个主要区域，多恩也以保留亲王头衔的方式并入。"],
+        "铁王座": ["王权象征", "红堡大厅中的王座，也是君临政权和“统治七国”权威的代称；它由征服战争中敌人交出的剑熔铸而成，象征征服而非舒适统治。"],
+        "征服战争": ["历史时期", "伊耿一世、维桑尼亚和雷妮丝骑龙入侵维斯特洛，六个王国迅速臣服，多恩则长期抵抗；君临、赫伦堡和怒火燎原战场是地图上的关键节点。"],
+        "篡夺者战争": ["历史时期", "又称劳勃叛乱，由莱安娜失踪、史塔克父子被处决和疯王暴政引爆；三叉戟河之战与君临陷落终结坦格利安近三百年统治。"],
+        "五王之战": ["历史时期", "劳勃死后爆发的继承内战，乔佛里、史坦尼斯、蓝礼、罗柏和巴隆等宣称或割据势力相继参战；河间地、君临、风息堡和北境是主要战场。"],
+        "长夜": ["神话 / 终局战", "远古时代异鬼入侵和黑暗寒冬的传说，也指后期异鬼南下造成的生存战争；它把王权争夺重新压回人类存亡问题。"],
+        "异鬼": ["威胁", "来自极北的非人敌人，能驱使尸鬼并畏惧龙晶等少数武器；在书中他们通过守夜人、山姆和琼恩的 POV 逐步从传说变成现实威胁。"],
+        "巨龙": ["军事力量", "坦格利安家族征服维斯特洛的核心武力，能改变城堡、野战和政治威慑的规则；赫伦堡、怒火燎原、龙穴暴动和丹妮莉丝回归都围绕龙展开。"],
+        "守夜人": ["组织", "驻守长城的军事兄弟会，宣誓不娶妻、不封地、不生子，理论上不参与七国政治；到劳勃时代人数锐减，防御野人与异鬼的能力衰落。"],
+        "长城": ["防线", "横贯北境北缘的巨型冰墙，隔开七国与长城以北荒原；黑城堡、东海望、长夜堡等据点构成琼恩、山姆和布兰路线的北方骨架。"],
+        "北境": ["区域", "维斯特洛最大区域，政治中心为临冬城，长期由史塔克家族统治；其距离、气候和旧神信仰使它与南方宫廷保持明显差异。"],
+        "河间地": ["区域", "三叉戟河流域的战略腹地，缺少天然边界，因而在五王之战中反复遭军队碾压；凯特琳、艾莉亚、詹姆和布蕾妮的书中路线都在这里交错。"],
+        "西境": ["区域", "兰尼斯特家族核心领地，以凯岩城和金矿财富著称；它的财政能力支撑了君临政权和五王之战中的兰尼斯特军事机器。"],
+        "谷地": ["区域", "艾林家族山地领地，鹰巢城与血门构成极强防御；提利昂的比武审判和珊莎化名阿莲石东都发生在这条政治支线中。"],
+        "王领": ["区域", "君临周边直属铁王座的领地，连接黑水湾、红堡、贝勒大圣堂和龙石岛；宫廷政变、围城和审判多集中在这里。"],
+        "风暴地": ["区域", "拜拉席恩传统领地，以风息堡为象征；蓝礼、史坦尼斯、戴佛斯、布蕾妮和梅丽珊卓的早期冲突在这里集中爆发。"],
+        "河湾地": ["区域", "粮食丰饶、人口稠密的南方区域，高庭掌握农业与骑士资源，旧镇则拥有学城和海塔尔势力。"],
+        "多恩": ["区域", "维斯特洛最南端的炎热领地，马泰尔家族统治，法律和继承传统与七国其他地区不同；亚莲恩、亚利欧和昆廷的 POV 路线从这里展开。"],
+        "铁群岛": ["区域", "西海群岛，由葛雷乔伊等铁民控制，文化强调航海、掠夺和淹神信仰；席恩、阿莎、伊伦和维克塔利昂的 POV 都围绕这里的身份与王选会展开。"],
+        "黑水湾": ["海湾", "君临外海的关键水域，史坦尼斯进攻君临时必须从这里突破；野火、铁链和提利昂的防御方案决定了黑水河之战。"],
+        "三叉戟河": ["河流", "河间地的核心河系，红宝石浅滩是劳勃击杀雷加的地方；它也象征坦格利安旧王朝向拜拉席恩新王朝的断裂点。"],
+        "神眼湖": ["湖泊", "赫伦堡旁的大湖，湖心有千面屿；魔龙狂舞中的戴蒙与伊蒙德决斗让它成为龙家内战的标志地点。"],
+        "君临": ["都城", "铁王座所在城市，由伊耿登陆后的木堡发展而来；艾德、珊莎、提利昂、瑟曦和詹姆等 POV 的宫廷线都在此汇合。"],
+        "临冬城": ["城堡", "史塔克家族祖堡，北境政治与记忆中心；布兰坠塔、王驾抵达、席恩占领和后期北境决战都使它成为地图上最密集的事件点之一。"],
+        "赫伦堡": ["城堡", "黑心赫伦所建的巨型城堡，被贝勒里恩龙焰熔毁后成为诅咒废堡；征服战争、赫伦堡比武大会、艾莉亚河间地线和詹姆转折都与它有关。"],
+        "孪河城": ["城堡", "佛雷家族控制绿叉河渡口的双城堡，战略价值来自过河通道；血色婚礼使它成为违反宾客权利和政治背叛的代名词。"],
+        "龙石岛": ["岛屿 / 城堡", "坦格利安征服前在维斯特洛的据点，后来常是王室继承人封地；史坦尼斯和丹妮莉丝都曾以这里作为宣称铁王座的前线基地。"],
+        "红堡": ["城堡 / 宫廷", "君临王室城堡，包含铁王座大厅、国王居所和大量密道；艾德被捕、提利昂审判、瑟曦摄政等宫廷事件都围绕它展开。"],
+        "贝勒大圣堂": ["宗教地点", "君临最重要的七神教会圣地之一，艾德处刑和乔佛里婚礼都让它成为王权、信仰与公共表演交汇的地点。"],
+        "鹰巢城": ["城堡", "谷地艾林家族高山城堡，以月门和险峻道路闻名；提利昂的比武审判与珊莎的阿莲石东身份都在这里改变路线。"],
+        "学城": ["组织 / 地点", "旧镇的知识机构，训练学士并管理渡鸦通信、医药、历史和天文等知识；山姆威尔南下旧镇让北方威胁进入学术中心。"],
+        "学士": ["职业 / 组织", "学城培养并派往各城堡服务的学者与顾问，负责医治、通信、记录和教育；他们是七国信息网络的重要节点。"],
+        "御林铁卫": ["王室组织", "宣誓终身守护国王的七名骑士，政治上必须服务在位君主；詹姆、巴利斯坦和黎明神剑的故事都在考验誓言与荣誉。"],
+        "国王之手": ["官职", "国王最重要的代理人与首席行政官，可代王处理政务、审判和军事安排；琼恩·艾林之死与艾德上任引爆了主线。"],
+        "小议会": ["政治机构", "辅佐国王的核心委员会，通常包括国王之手、大学士、财政、情报、海政和法务等职位；君临阴谋多从这里扩散。"],
+        "七神教会": ["宗教组织", "南方七国主流信仰体系，以天父、圣母、战士、少女、铁匠、老妪和陌客七面神为核心；瑟曦重启教会武装后，宗教力量重新进入政治中心。"],
+        "旧神": ["信仰", "北境和长城以北保存的古老信仰，通过鱼梁木心树与森林之子传统相连；布兰的 POV 路线不断深入这套记忆和魔法体系。"],
+        "淹神信仰": ["宗教", "铁民传统信仰，强调海、溺水仪式和“逝者不死”；湿发伊伦的 POV 用它解释铁群岛政治与古道复兴。"],
+        "无旗兄弟会": ["组织", "最初由艾德派往河间地缉拿魔山的队伍，后来演变为保护平民和执行复仇的游击组织；艾莉亚、布蕾妮和石心夫人都与其路线相交。"],
+        "宾客权利": ["习俗 / 法律", "维斯特洛古老的待客神圣原则，主人与客人在共享面包和盐后不得互相伤害；血色婚礼之所以震动七国，正因它公然践踏这一底线。"],
+        "琼恩": ["人物", "琼恩·雪诺是北境、守夜人与异鬼战争的核心 POV；他的路线从临冬城到黑城堡，再到野人、艰难屯和北境政治。"],
+        "丹妮莉丝": ["人物", "丹妮莉丝·坦格利安的主要原著路线在厄斯索斯，当前维斯特洛底图以龙石岛登陆和君临结局表示她与七国政治的交汇。"],
+        "艾德": ["人物", "艾德·史塔克的 POV 集中在第一卷，从临冬城到君临调查继承真相；他的死亡把家族悲剧升级为王国战争。"],
+        "凯特琳": ["人物", "凯特琳·史塔克是史塔克与徒利两大家族的连接点；她的路线穿过临冬城、十字路口旅店、鹰巢城、风暴地和血色婚礼。"],
+        "珊莎": ["人物", "珊莎·史塔克的 POV 从君临人质线转向谷地阿莲石东身份，主题是宫廷礼仪、恐惧、表演和政治学习。"],
+        "艾莉亚": ["人物", "艾莉亚·史塔克的 POV 从君临逃亡到河间地战乱，再走向身份伪装与复仇；她的地图路线最能显示战争对道路和平民的影响。"],
+        "布兰": ["人物", "布兰·史塔克的 POV 从临冬城继承人转为绿先知学徒，路线经长夜堡进入长城以北，连接旧神、心树与三眼乌鸦。"],
+        "瑟曦": ["人物", "瑟曦·兰尼斯特的 POV 展示君临摄政权力、家族恐惧和短视政治；重启教会武装是她路线中的制度性反噬。"],
+        "罗柏": ["人物", "罗柏·史塔克不是原著 POV，但作为北境之王影响凯特琳、艾德、席恩和北境诸侯的路线；他的军事胜利与婚约失败共同导向血色婚礼。"],
+        "提利昂": ["人物", "提利昂·兰尼斯特的 POV 横跨十字路口、鹰巢城、绿叉河、君临和后来的流亡，是政治机智、身份羞辱与家族决裂的路线。"],
+        "詹姆": ["人物", "詹姆·兰尼斯特从弑君者与俘虏转为自我审判者；赫伦堡、布蕾妮和奔流城使他的路线不断回到誓言问题。"],
+        "戴佛斯": ["人物", "戴佛斯·席渥斯是史坦尼斯阵营的 POV，道德直觉强于贵族血统；黑水湾、龙石岛和白港构成他的主要维斯特洛路线。"],
+        "山姆威尔": ["人物", "山姆威尔·塔利的 POV 连接守夜人、异鬼证据和旧镇学城；他从黑城堡新兵变成传递北方真相的人。"],
+        "布蕾妮": ["人物", "布蕾妮·塔斯的 POV 追踪誓言如何在战后废墟中被履行；她从风暴地出发，穿过赫伦堡与河间地寻找史塔克女孩。"],
+        "夜王": ["人物 / 威胁", "夜王是剧集终局中异鬼军团的核心威胁；在本地图中用于表示长夜之战的敌方中心。"]
+      };
+
+      Object.entries(curatedGlossary).forEach(([term, [type, description]]) => {
+        upsertTerm(term, { type, description });
+      });
+
+      getMapPlaceEntries().forEach((place) => {
+        const events = getEventsForPlaceEntry(place);
+        const eventText = getPlaceEventText(events);
+        const current = registry[place.name];
+        upsertTerm(place.name, {
+          title: place.name,
+          type: current?.type || place.typeLabel,
+          coord: current?.coord || place.coord,
+          eventId: current?.eventId || events[0]?.id,
+          description: appendPlaceEventText(current?.description, eventText)
+        });
+
+        place.aliases.forEach((alias) => {
+          const aliasCurrent = registry[alias];
+          upsertTerm(alias, {
+            title: place.name,
+            type: aliasCurrent?.type || place.typeLabel,
+            coord: aliasCurrent?.coord || place.coord,
+            eventId: aliasCurrent?.eventId || events[0]?.id,
+            description: appendPlaceEventText(aliasCurrent?.description, eventText)
+          });
+        });
+      });
+
+      return registry;
+    }
+
+    function getMapPlaceEntries() {
+      const entries = new Map();
+      const upsertPlace = ({ key, name, coord, aliases = [], typeLabel = "地点" }) => {
+        if (!name) return;
+        const existing = entries.get(name) || { key, name, coord, aliases: [], typeLabel };
+        existing.key = existing.key || key;
+        existing.coord = existing.coord || coord;
+        existing.typeLabel = getPreferredPlaceType(existing.typeLabel, typeLabel);
+        existing.aliases = [...new Set([...existing.aliases, ...aliases].filter((alias) => alias && alias !== name))];
+        entries.set(name, existing);
+      };
+
+      Object.entries(placeCoords).forEach(([key, place]) => {
+        upsertPlace({
+          key,
+          name: place.name,
+          coord: place.coord,
+          aliases: place.aliases,
+          typeLabel: place.typeLabel || "地点"
+        });
+      });
+
+      castles.forEach((castle) => {
+        upsertPlace({
+          key: castle.placeKey,
+          name: castle.name,
+          coord: castle.coord,
+          aliases: [],
+          typeLabel: "城堡 / 地点"
+        });
+      });
+
+      mapLabels.forEach((label) => {
+        upsertPlace({
+          key: Object.entries(placeCoords).find(([, place]) => place.name === label.text)?.[0],
+          name: label.text,
+          coord: label.coord,
+          aliases: [],
+          typeLabel: getMapLabelType(label.type)
+        });
+      });
+
+      return [...entries.values()];
+    }
+
+    function getMapLabelType(type) {
+      if (type === "region") return "区域 / 地点";
+      if (type === "sea") return "海域 / 地点";
+      return "地点";
+    }
+
+    function getPreferredPlaceType(currentType, nextType) {
+      if (currentType === "城堡 / 地点" || nextType === "城堡 / 地点") return "城堡 / 地点";
+      if (currentType === "区域 / 地点" || nextType === "区域 / 地点") return "区域 / 地点";
+      if (currentType === "海域 / 地点" || nextType === "海域 / 地点") return "海域 / 地点";
+      return nextType || currentType || "地点";
+    }
+
+    function getEventsForPlaceEntry(place) {
+      const names = [place.name, ...place.aliases].filter(Boolean);
+      return majorEvents.filter((event) => {
+        if (place.key && event.locationKey === place.key) return true;
+        if (place.coord && sameCoord(event.coord, place.coord)) return true;
+        const haystack = `${event.title} ${event.place}`;
+        return names.some((name) => haystack.includes(name));
+      });
+    }
+
+    function getPlaceEventText(events) {
+      if (!events.length) return "当前事件库暂无直接发生在这里的事件。";
+      const titles = events.map((event) => event.title).join("、");
+      return `这里关联的事件：${titles}。`;
+    }
+
+    function appendPlaceEventText(description, eventText) {
+      const base = description || "";
+      if (!base) return eventText;
+      if (base.includes("这里关联的事件：") || base.includes("当前事件库暂无直接发生在这里的事件。")) return base;
+      return `${base} ${eventText}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function linkifyTerms(value) {
+      const raw = String(value ?? "");
+      let html = "";
+      let index = 0;
+
+      while (index < raw.length) {
+        const matchedTerm = linkableTerms.find((term) => raw.startsWith(term, index));
+        if (matchedTerm) {
+          html += `<button class="term-link" type="button" data-term="${encodeURIComponent(matchedTerm)}">${escapeHtml(matchedTerm)}</button>`;
+          index += matchedTerm.length;
+        } else {
+          html += escapeHtml(raw[index]);
+          index += 1;
+        }
+      }
+
+      return html;
+    }
+
+    function setupTermInteractions() {
+      document.addEventListener("click", (event) => {
+        const termButton = event.target.closest("[data-term], [data-related-term]");
+        if (!termButton) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const encodedTerm = termButton.dataset.term || termButton.dataset.relatedTerm;
+        showTermInfo(decodeURIComponent(encodedTerm));
+      });
+
+      document.addEventListener("click", (event) => {
+        const termPopover = document.getElementById("termPopover");
+        if (termPopover.hidden || !isMobileViewport()) return;
+        if (event.target.closest("#termPopover") || event.target.closest("[data-term], [data-related-term]")) return;
+        termPopover.hidden = true;
+      });
+
+      document.getElementById("termClose").addEventListener("click", () => {
+        document.getElementById("termPopover").hidden = true;
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          document.getElementById("termPopover").hidden = true;
+        }
+      });
+    }
+
+    function setupMobileControls() {
+      const toggle = document.getElementById("mobileEventsToggle");
+      const detailToggle = document.getElementById("mobileDetailToggle");
+      const currentEvent = document.getElementById("mobileCurrentEvent");
+      const close = document.getElementById("mobileCloseEvents");
+      const reset = document.getElementById("mobileResetView");
+      const panel = document.querySelector(".event-panel");
+      let touchStartY = null;
+
+      toggle.addEventListener("click", () => {
+        openMobileEvents("list");
+      });
+
+      detailToggle.addEventListener("click", () => {
+        openMobileEvents("detail");
+      });
+
+      currentEvent.addEventListener("click", () => {
+        openMobileEvents("detail");
+      });
+
+      close.addEventListener("click", () => {
+        document.body.classList.remove("mobile-events-open");
+      });
+
+      reset.addEventListener("click", () => {
+        resetAppState({ animate: true });
+      });
+
+      document.querySelectorAll("[data-mobile-tab]").forEach((button) => {
+        button.addEventListener("click", () => openMobileEvents(button.dataset.mobileTab));
+      });
+
+      panel.addEventListener("touchstart", (event) => {
+        touchStartY = event.touches[0]?.clientY ?? null;
+      }, { passive: true });
+
+      panel.addEventListener("touchend", (event) => {
+        if (touchStartY === null) return;
+        const endY = event.changedTouches[0]?.clientY ?? touchStartY;
+        if (endY - touchStartY > 86) {
+          document.body.classList.remove("mobile-events-open");
+        }
+        touchStartY = null;
+      }, { passive: true });
+
+      map.on("dragstart click", () => {
+        if (isMobileViewport()) {
+          document.body.classList.remove("mobile-events-open");
+          document.getElementById("termPopover").hidden = true;
+        }
+      });
+    }
+
+    function isMobileViewport() {
+      return window.matchMedia("(max-width: 760px)").matches;
+    }
+
+    function openMobileEvents(tab = "list") {
+      if (tab === "detail") {
+        document.body.classList.add("mobile-detail-tab");
+      } else {
+        document.body.classList.remove("mobile-detail-tab");
+      }
+      document.body.classList.add("mobile-events-open");
+    }
+
+    function resetAppState(options = {}) {
+      const animate = options.animate === true;
+      window.scrollTo?.(0, 0);
+      document.body.classList.remove("mobile-events-open");
+      document.body.classList.remove("mobile-detail-tab");
+      document.getElementById("termPopover").hidden = true;
+      map.closePopup();
+      map.fitBounds(imageBounds, { padding: [18, 18], animate });
+      selectEvent(majorEvents[0].id, { fly: false, openPopup: false });
+      requestAnimationFrame?.(() => window.scrollTo?.(0, 0));
+    }
+
+    function showTermInfo(term) {
+      const entry = termRegistry[term];
+      if (!entry) return;
+
+      document.getElementById("termType").textContent = entry.type;
+      document.getElementById("termTitle").textContent = entry.title || term;
+      document.getElementById("termBody").textContent = entry.description;
+
+      const mapButton = document.getElementById("termFocusMap");
+      mapButton.hidden = !entry.coord;
+      mapButton.onclick = entry.coord ? () => {
+        document.getElementById("termPopover").hidden = true;
+        if (isMobileViewport()) {
+          document.body.classList.remove("mobile-events-open");
+        }
+        map.flyTo(entry.coord, Math.max(map.getZoom(), 0.05), { duration: 0.75, easeLinearity: 0.25 });
+      } : null;
+
+      const eventButton = document.getElementById("termFocusEvent");
+      eventButton.hidden = !entry.eventId;
+      eventButton.onclick = entry.eventId ? () => {
+        document.getElementById("termPopover").hidden = true;
+        selectEvent(entry.eventId, { fly: true, openPopup: true });
+        if (isMobileViewport()) {
+          openMobileEvents("detail");
+        }
+      } : null;
+
+      renderTermRelated(term, entry);
+      document.getElementById("termPopover").hidden = false;
+    }
+
+    function renderTermRelated(term, entry) {
+      const related = getRelatedTerms(term, entry);
+      const container = document.getElementById("termRelated");
+      container.innerHTML = related.length ? `
+        <div class="term-related-label">相关词条</div>
+        <div class="term-related-list">
+          ${related.map((item) => `
+            <button class="term-action" type="button" data-related-term="${encodeURIComponent(item)}">${escapeHtml(item)}</button>
+          `).join("")}
+        </div>
+      ` : "";
+    }
+
+    function getRelatedTerms(term, entry) {
+      const seen = new Set([term, entry.title]);
+      const related = [];
+      const addTerm = (candidate) => {
+        if (!candidate || seen.has(candidate) || !termRegistry[candidate]) return;
+        seen.add(candidate);
+        related.push(candidate);
+      };
+
+      const scanText = (text) => {
+        const raw = String(text ?? "");
+        linkableTerms.forEach((candidate) => {
+          if (raw.includes(candidate)) addTerm(candidate);
+        });
+      };
+
+      scanText(`${entry.title || ""} ${entry.type || ""} ${entry.description || ""}`);
+
+      const characterId = Object.entries(characters).find(([, person]) => {
+        return person.name === entry.title || person.name === term || person.name.startsWith(term);
+      })?.[0];
+
+      if (characterId) {
+        getEventsForCharacter(characterId).slice(0, 6).forEach((event) => {
+          addTerm(event.title);
+          addTerm(event.place);
+        });
+      }
+
+      if (entry.eventId) {
+        const event = majorEvents.find((item) => item.id === entry.eventId);
+        if (event) {
+          addTerm(event.place);
+          getEventCharacters(event).forEach((person) => addTerm(person.name));
+          scanText(`${event.title} ${event.time} ${event.place} ${event.related} ${event.summary} ${event.impact}`);
+        }
+      }
+
+      if (entry.coord) {
+        majorEvents
+          .filter((event) => sameCoord(event.coord, entry.coord))
+          .slice(0, 4)
+          .forEach((event) => addTerm(event.title));
+      }
+
+      return related.slice(0, 8);
+    }
+
+    function renderEventList() {
+      const eventList = document.getElementById("eventList");
+      eventList.innerHTML = majorEvents.map((event) => `
+        <button class="event-item" type="button" data-event-id="${event.id}">
+          <span class="event-item-title">${event.title}</span>
+          <span class="event-item-time">${event.time}</span>
+          <span class="event-item-place">${event.place}</span>
+          <span class="event-item-category">${event.category}</span>
+        </button>
+      `).join("");
+
+      eventList.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-event-id]");
+        if (!button) return;
+        selectEvent(button.dataset.eventId, { fly: true, openPopup: true });
+      });
+    }
+
+    function getEventsForCharacter(characterId) {
+      return majorEvents.filter((event) => getEventCharacterIds(event).includes(characterId));
+    }
+
+    function selectEvent(eventId, options = {}) {
+      const event = majorEvents.find((item) => item.id === eventId);
+      if (!event) return;
+
+      document.querySelectorAll("[data-event-id]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.eventId === eventId);
+      });
+
+      eventMarkers.forEach(({ marker, event: markerEvent }, markerEventId) => {
+        marker.setIcon(createEventIcon(markerEvent, markerEventId === eventId));
+      });
+
+      renderEventDetail(event);
+      document.getElementById("mobileCurrentTitle").textContent = `${event.title} · ${event.place}`;
+
+      const activeButton = document.querySelector(`[data-event-id="${eventId}"]`);
+      activeButton?.scrollIntoView({ block: "nearest" });
+
+      const eventMarker = eventMarkers.get(eventId)?.marker;
+      if (options.fly) {
+        const targetZoom = Math.min(0.2, Math.max(map.getZoom(), -0.45));
+        map.flyTo(event.displayCoord || event.coord, targetZoom, { duration: 0.75, easeLinearity: 0.25 });
+      }
+
+      if (options.openPopup && eventMarker) {
+        eventMarker.openPopup();
+      }
+
+      if (options.fly && isMobileViewport()) {
+        document.body.classList.add("mobile-detail-tab");
+        document.body.classList.remove("mobile-events-open");
+      }
+    }
+
+    function renderEventDetail(event) {
+      const detail = document.getElementById("eventDetail");
+      detail.innerHTML = `
+        <h2>${linkifyTerms(event.title)}</h2>
+        ${renderAvatarStrip(event, { showNames: true })}
+        <div class="event-meta">
+          <div><span>时间</span><br>${linkifyTerms(event.time)}</div>
+          <div><span>地点</span><br>${linkifyTerms(event.place)}</div>
+          <div><span>类型</span><br>${escapeHtml(event.category)}</div>
+          <div><span>坐标</span><br>${Math.round(event.coord[1])}, ${Math.round(event.coord[0])}</div>
+        </div>
+        <p>${linkifyTerms(event.summary)}</p>
+        <div class="event-impact"><span>相关人物 / 势力：</span>${linkifyTerms(event.related)}</div>
+        <div class="event-impact"><span>影响：</span>${linkifyTerms(event.impact)}</div>
+      `;
+    }
+
+    function getEventPopupHtml(event) {
+      return `
+        <b>${linkifyTerms(event.title)}</b><br>
+        ${linkifyTerms(event.time)}<br>
+        <span style="color:#c8b58d">${linkifyTerms(event.place)}</span>
+        ${renderAvatarStrip(event, { compact: true })}
+      `;
+    }
+
+    function getOffsetEventCoord(event) {
+      const samePlaceEvents = majorEvents.filter((item) => sameCoord(item.coord, event.coord));
+      if (samePlaceEvents.length === 1) return event.coord;
+
+      const index = samePlaceEvents.findIndex((item) => item.id === event.id);
+      const angle = (Math.PI * 2 * index) / samePlaceEvents.length - Math.PI / 2;
+      // 事件点需要保留一点点错开以便点击，但不能离开底图地名太远。
+      // 手机近景会放大 CRS.Simple 的像素偏移，因此移动端用更小半径。
+      const maxRadius = isMobileViewport() ? 8 : 14;
+      const radius = Math.min(maxRadius, 3 + samePlaceEvents.length * 1.2);
+
+      return [
+        event.coord[0] + Math.sin(angle) * radius,
+        event.coord[1] + Math.cos(angle) * radius
+      ];
+    }
+
+    function sameCoord(a, b) {
+      return Math.abs(a[0] - b[0]) < 2 && Math.abs(a[1] - b[1]) < 2;
+    }
+
+    function renderAvatarStrip(event, options = {}) {
+      const people = getEventCharacters(event).slice(0, options.compact ? 5 : 6);
+      if (!people.length) return "";
+
+      return `
+        <div class="${options.compact ? "popup-avatars" : "avatar-row"}">
+          ${people.map((person) => options.showNames
+            ? `<span class="avatar">${renderAvatarMedia(person)}</span><span class="avatar-name">${linkifyTerms(person.name)}</span>`
+            : `<span class="avatar" title="${person.name}">${renderAvatarMedia(person)}</span>`
+          ).join("")}
+        </div>
+      `;
+    }
+
+    function renderAvatarMedia(person) {
+      const fallback = `<span class="avatar-fallback"${person.avatar ? " style=\"display:none\"" : ""}>${getInitial(person.name)}</span>`;
+      if (!person.avatar) return fallback;
+      return `<img src="${person.avatar}" alt="${person.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='grid';">${fallback}`;
+    }
+
+    function getEventCharacters(event) {
+      return getEventCharacterIds(event)
+        .map((key) => ({ id: key, ...characters[key] }))
+        .filter(Boolean);
+    }
+
+    function getEventCharacterIds(event) {
+      const haystack = `${event.title} ${event.related} ${event.summary} ${event.impact}`;
+      return characterMatchRules
+        .filter((rule) => {
+          const hasAlias = rule.aliases.some((alias) => haystack.includes(alias));
+          const hasExcludedName = rule.exclude?.some((alias) => haystack.includes(alias));
+          return hasAlias && !hasExcludedName;
+        })
+        .map((rule) => rule.id);
+    }
+
+    function getInitial(name) {
+      return name.replace(/[·\s]/g, "").slice(0, 1);
+    }
+
+    function renderLegend() {
+      const legend = document.getElementById("legend");
+      const visibleHouseIds = [...new Set(castles.map((castle) => castle.houseId))];
+      legend.innerHTML = visibleHouseIds.map((houseId) => {
+        const house = houses[houseId];
+        return `
+          <span class="legend-item">
+            <span class="legend-swatch" style="--house-color:${house.color}"></span>
+            <span>${linkifyTerms(house.name)}</span>
+          </span>
+        `;
+      }).join("");
+    }
+
+    function startGuidedDemo() {
+      const caption = document.createElement("div");
+      caption.className = "demo-caption";
+      caption.textContent = "打开维斯特洛互动地图，先总览大陆与右侧事件列表";
+      document.body.appendChild(caption);
+
+      const cursor = document.createElement("div");
+      cursor.className = "demo-cursor";
+      document.body.appendChild(cursor);
+
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const setCaption = (text) => {
+        caption.textContent = text;
+      };
+
+      const moveCursorTo = async (element, offset = { x: 0.5, y: 0.5 }) => {
+        if (!element) return;
+        const rect = element.getBoundingClientRect();
+        cursor.style.opacity = "1";
+        cursor.style.left = `${rect.left + rect.width * offset.x}px`;
+        cursor.style.top = `${rect.top + rect.height * offset.y}px`;
+        await sleep(720);
+      };
+
+      const clickCursor = () => {
+        cursor.classList.remove("clicking");
+        void cursor.offsetWidth;
+        cursor.classList.add("clicking");
+      };
+
+      const focusElement = (element, duration = 1100) => {
+        if (!element) return;
+        element.classList.add("demo-focus-ring");
+        setTimeout(() => element.classList.remove("demo-focus-ring"), duration);
+      };
+
+      const pickEvent = async (eventId, captionText) => {
+        const button = document.querySelector(`[data-event-id="${eventId}"]`);
+        if (!button) return;
+        button.scrollIntoView({ block: "center", behavior: "smooth" });
+        setCaption(captionText);
+        focusElement(button, 1300);
+        await sleep(520);
+        await moveCursorTo(button, { x: 0.28, y: 0.5 });
+        clickCursor();
+        selectEvent(eventId, { fly: true, openPopup: true });
+      };
+
+      const run = async () => {
+        const panel = document.querySelector(".event-panel");
+        const zoomIn = document.querySelector(".leaflet-control-zoom-in");
+        const zoomOut = document.querySelector(".leaflet-control-zoom-out");
+        const mapElement = document.getElementById("map");
+
+        map.closePopup();
+        map.fitBounds(imageBounds, { padding: [18, 18], animate: true });
+        await sleep(1400);
+
+        setCaption("右侧是重要事件列表：点击任一事件，地图会自动飞到发生地点");
+        focusElement(panel, 1500);
+        await moveCursorTo(panel, { x: 0.38, y: 0.2 });
+        await sleep(700);
+
+        await pickEvent("red-wedding", "选择“血色婚礼”：定位到孪河城，并弹出事件信息");
+        await sleep(2200);
+
+        await pickEvent("blackwater", "选择“黑水河之战”：地图飞到君临与黑水湾");
+        await sleep(1900);
+
+        setCaption("用缩放控件放大，查看城堡、事件亮点与中文地名细节");
+        focusElement(zoomIn, 900);
+        await moveCursorTo(zoomIn);
+        clickCursor();
+        map.zoomIn(0.7, { animate: true });
+        await sleep(1300);
+
+        setCaption("拖动地图可以沿着道路和海岸线移动视野");
+        await moveCursorTo(mapElement, { x: 0.46, y: 0.55 });
+        clickCursor();
+        map.panBy([-230, 120], { animate: true, duration: 0.9 });
+        await sleep(1600);
+        map.panBy([310, -190], { animate: true, duration: 0.9 });
+        await sleep(1600);
+
+        await pickEvent("long-night-winterfell", "浏览“长夜之战”：回到临冬城，查看异鬼入侵事件");
+        await sleep(2100);
+
+        setCaption("缩小回到全局视角，继续比较南北各地事件分布");
+        focusElement(zoomOut, 900);
+        await moveCursorTo(zoomOut);
+        clickCursor();
+        map.zoomOut(1.1, { animate: true });
+        await sleep(1300);
+
+        await pickEvent("fall-kings-landing", "选择终局事件：君临焚城，查看人物与影响");
+        await sleep(2100);
+
+        setCaption("演示结束：事件列表、地点弹窗、缩放和平移都可直接交互使用");
+        cursor.style.opacity = "0";
+      };
+
+      run();
+    }
+  </script>
+</body>
+</html>

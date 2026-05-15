@@ -3,7 +3,6 @@
 手机端说明：
 
 - 点击“事件列表”打开底部事件抽屉。
-- 在“Character Routes”里选择主角，可查看该人物按时间排列的地点路线。
 - 抽屉内可切换“事件列表 / 当前详情”。
 - 选择事件后会自动回到地图，并显示“当前事件”浮条。
 - 点击“当前详情”或浮条可重新打开详情。
@@ -12,4 +11,4 @@
 
 访问地址：
 
-https://zhao0057.github.io/index.html
+https://zhao0057.github.io/westeros-history-map/
