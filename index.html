@@ -135,7 +135,7 @@
       right: 18px;
       z-index: 820;
       display: grid;
-      grid-template-rows: auto auto minmax(130px, 1fr) auto;
+      grid-template-rows: auto minmax(130px, 1fr) auto;
       width: min(390px, calc(100vw - 36px));
       max-height: calc(100vh - 36px);
       border: 1px solid var(--line);
@@ -307,179 +307,6 @@
       line-height: 1.25;
     }
 
-    .character-routes {
-      padding: 9px 10px 10px;
-      border-bottom: 1px solid rgba(215, 181, 109, 0.18);
-      background: rgba(0, 0, 0, 0.16);
-    }
-
-    .route-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 7px;
-    }
-
-    .route-toolbar strong {
-      color: #f2d58c;
-      font-family: "Cinzel", Georgia, serif;
-      font-size: 0.78rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .route-clear {
-      border: 1px solid rgba(215, 181, 109, 0.22);
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.16);
-      color: #d9c89f;
-      padding: 4px 9px 5px;
-      font-size: 0.78rem;
-      line-height: 1;
-      cursor: pointer;
-    }
-
-    .route-clear:hover,
-    .route-clear:focus-visible {
-      border-color: rgba(242, 213, 140, 0.7);
-      color: #fff0bc;
-      outline: none;
-    }
-
-    .character-route-list {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding-bottom: 2px;
-      scrollbar-color: rgba(215, 181, 109, 0.38) rgba(0, 0, 0, 0.2);
-      scrollbar-width: thin;
-    }
-
-    .character-route-button {
-      flex: 0 0 auto;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      max-width: 142px;
-      min-height: 34px;
-      padding: 4px 8px 4px 5px;
-      border: 1px solid rgba(215, 181, 109, 0.16);
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.18);
-      color: #eadfc6;
-      cursor: pointer;
-      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
-    }
-
-    .character-route-button:hover,
-    .character-route-button.active {
-      border-color: rgba(242, 213, 140, 0.7);
-      background: rgba(215, 181, 109, 0.12);
-      transform: translateY(-1px);
-    }
-
-    .character-route-button .avatar {
-      flex: 0 0 auto;
-      width: 24px;
-      height: 24px;
-      margin: 0;
-    }
-
-    .route-person-name {
-      overflow: hidden;
-      font-size: 0.86rem;
-      font-weight: 700;
-      line-height: 1;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .route-count {
-      color: #bfae84;
-      font-size: 0.74rem;
-      line-height: 1;
-      white-space: nowrap;
-    }
-
-    .route-summary {
-      margin-top: 8px;
-      color: #cbb98f;
-      font-size: 0.86rem;
-      line-height: 1.2;
-    }
-
-    .route-summary b {
-      color: #f2d58c;
-      font-weight: 700;
-    }
-
-    .route-stop-list {
-      display: grid;
-      gap: 5px;
-      max-height: 132px;
-      margin: 7px 0 0;
-      padding: 0;
-      overflow: auto;
-      list-style: none;
-      scrollbar-color: rgba(215, 181, 109, 0.38) rgba(0, 0, 0, 0.2);
-      scrollbar-width: thin;
-    }
-
-    .route-stop-item {
-      display: grid;
-      grid-template-columns: 22px minmax(0, 1fr);
-      gap: 7px;
-      width: 100%;
-      padding: 6px 7px;
-      border: 1px solid rgba(215, 181, 109, 0.14);
-      border-radius: 5px;
-      background: rgba(0, 0, 0, 0.14);
-      color: #eadfc6;
-      text-align: left;
-      cursor: pointer;
-    }
-
-    .route-stop-item:hover,
-    .route-stop-item.active {
-      border-color: rgba(242, 213, 140, 0.62);
-      background: rgba(215, 181, 109, 0.12);
-    }
-
-    .route-stop-index {
-      display: grid;
-      place-items: center;
-      width: 20px;
-      height: 20px;
-      border: 1px solid rgba(255, 244, 196, 0.74);
-      border-radius: 50%;
-      background: rgba(215, 181, 109, 0.2);
-      color: #f2d58c;
-      font-family: "Cinzel", Georgia, serif;
-      font-size: 0.68rem;
-      font-weight: 700;
-    }
-
-    .route-stop-title {
-      overflow: hidden;
-      font-size: 0.88rem;
-      font-weight: 700;
-      line-height: 1.08;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .route-stop-meta {
-      overflow: hidden;
-      margin-top: 2px;
-      color: #bfae84;
-      font-size: 0.76rem;
-      line-height: 1.1;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
     .event-list {
       overflow: auto;
       padding: 8px;
@@ -618,38 +445,6 @@
     }
 
     .event-marker.active .event-token {
-      animation: eventPulse 1.25s ease-in-out infinite;
-    }
-
-    .route-stop-marker {
-      width: 22px !important;
-      height: 22px !important;
-      margin-left: -11px !important;
-      margin-top: -11px !important;
-    }
-
-    .route-stop-token {
-      display: grid;
-      place-items: center;
-      width: 20px;
-      height: 20px;
-      border: 1px solid rgba(255, 244, 196, 0.92);
-      border-radius: 50%;
-      background:
-        radial-gradient(circle at 35% 30%, #fff9d8 0 16%, transparent 18%),
-        linear-gradient(135deg, var(--route-light), var(--route-color));
-      box-shadow:
-        0 0 0 2px rgba(17, 12, 8, 0.7),
-        0 0 13px rgba(255, 218, 112, 0.66),
-        0 5px 8px rgba(0, 0, 0, 0.42);
-      color: #fff4cd;
-      font-family: "Cinzel", Georgia, serif;
-      font-size: 9px;
-      font-weight: 700;
-      line-height: 1;
-    }
-
-    .route-stop-token.active {
       animation: eventPulse 1.25s ease-in-out infinite;
     }
 
@@ -1079,7 +874,7 @@
         height: min(68vh, 580px);
         max-height: none;
         border-radius: 14px;
-        grid-template-rows: auto auto auto minmax(0, 1fr);
+        grid-template-rows: auto auto minmax(0, 1fr);
         transform: translateY(calc(100% + 152px));
         transition: transform 220ms ease;
         pointer-events: none;
@@ -1156,37 +951,6 @@
         padding: 8px 8px 4px;
       }
 
-      .character-routes {
-        padding: 8px 10px 9px;
-      }
-
-      .route-toolbar {
-        margin-bottom: 6px;
-      }
-
-      .route-toolbar strong {
-        font-size: 0.74rem;
-      }
-
-      .character-route-button {
-        max-width: 126px;
-        min-height: 32px;
-        padding-right: 7px;
-      }
-
-      .character-route-button .avatar {
-        width: 22px;
-        height: 22px;
-      }
-
-      .route-summary {
-        font-size: 0.82rem;
-      }
-
-      .route-stop-list {
-        max-height: 88px;
-      }
-
       body.mobile-detail-tab .event-list {
         display: none;
       }
@@ -1258,7 +1022,7 @@
 
     <section class="title-card">
       <h1>维斯特洛大陆</h1>
-      <p>基于中文高分辨率静态地图的 Leaflet ImageOverlay。点击城堡、事件或人物路线查看信息。</p>
+      <p>基于中文高分辨率静态地图的 Leaflet ImageOverlay。点击城堡、事件或金色专有名词查看信息。</p>
     </section>
 
     <nav class="mobile-toolbar" aria-label="手机地图操作">
@@ -1283,16 +1047,8 @@
       <header class="event-header">
         <button id="mobileCloseEvents" class="mobile-close-events" type="button" aria-label="关闭事件面板">×</button>
         <strong>Major Events</strong>
-        <span>选择事件或主角路线后，地图会定位到发生地，并显示时间、人物与影响。</span>
+        <span>选择事件后，地图会定位到发生地，并显示时间、人物、影响和相关专有名词。</span>
       </header>
-      <section class="character-routes" aria-label="主角时间位置路线图">
-        <div class="route-toolbar">
-          <strong>Character Routes</strong>
-          <button id="clearCharacterRoute" class="route-clear" type="button">清除路线</button>
-        </div>
-        <div id="characterRouteList" class="character-route-list"></div>
-        <div id="routeSummary" class="route-summary">选择主角，查看其按时间排列的地点路线。</div>
-      </section>
       <div class="mobile-sheet-tabs" role="tablist" aria-label="事件面板切换">
         <button class="mobile-tab" type="button" data-mobile-tab="list">事件列表</button>
         <button class="mobile-tab" type="button" data-mobile-tab="detail">当前详情</button>
@@ -1550,17 +1306,6 @@
       { id: "ramsay", aliases: ["拉姆斯", "Ramsay"] },
       { id: "olenna", aliases: ["奥莲娜", "Olenna"] },
       { id: "nightking", aliases: ["夜王", "Night King"] }
-    ];
-
-    const routePalette = [
-      ["#d7b56d", "#fff0b0"],
-      ["#9fb9c9", "#d6f0ff"],
-      ["#b84a45", "#f2a06c"],
-      ["#7fa46b", "#c9e0a0"],
-      ["#b48ad2", "#e2c9ff"],
-      ["#d58a4b", "#ffd0a0"],
-      ["#8fc7b2", "#cef5df"],
-      ["#c95670", "#ffb8c8"]
     ];
 
     const majorEvents = [
@@ -2515,13 +2260,6 @@
     translationPane.style.zIndex = 420;
     translationPane.style.pointerEvents = "none";
 
-    const routeLinePane = map.createPane("character-route-lines");
-    routeLinePane.style.zIndex = 560;
-    routeLinePane.style.pointerEvents = "none";
-
-    const routeStopPane = map.createPane("character-route-stops");
-    routeStopPane.style.zIndex = 880;
-
     const mapOverlay = L.imageOverlay(MAP_URL, imageBounds, {
       className: "realistic-map",
       alt: "High-resolution map of Westeros"
@@ -2566,13 +2304,6 @@
     }
 
     const eventMarkers = new Map();
-    const characterRouteLayer = L.layerGroup().addTo(map);
-    const characterRouteState = {
-      characterId: null,
-      eventIds: [],
-      activeEventId: null,
-      markers: []
-    };
 
     majorEvents.forEach((event) => {
       event.displayCoord = getOffsetEventCoord(event);
@@ -2591,7 +2322,6 @@
     });
 
     renderLegend();
-    renderCharacterRoutes();
     renderEventList();
     setupTermInteractions();
     setupMobileControls();
@@ -2830,17 +2560,12 @@
           coord: event.coord,
           description: `${event.summary} 影响：${event.impact}`
         });
-        upsertTerm(event.category, {
-          type: "事件类型",
-          description: `“${event.category}”用于标记一类历史转折，便于在事件列表中快速辨认事件性质。`
-        });
       });
 
       const curatedGlossary = {
         "维斯特洛": ["大陆", "《冰与火之歌》主要政治舞台，绝大多数书中 POV 的早期路线都在这里展开；地图按北境、河间地、西境、王领、谷地、河湾地、风暴地、多恩和铁群岛组织事件。"],
         "七国": ["政治概念", "伊耿征服后形成的封建王国，名称来自征服前的七个独立王国；实际行政版图后来包含九个主要区域，多恩也以保留亲王头衔的方式并入。"],
         "铁王座": ["王权象征", "红堡大厅中的王座，也是君临政权和“统治七国”权威的代称；它由征服战争中敌人交出的剑熔铸而成，象征征服而非舒适统治。"],
-        "POV 路线": ["地图机制", "本地图把原著 POV 人物的重要章节地点整理成路线节点。由于底图只覆盖维斯特洛，丹妮莉丝、昆廷、提利昂等人在厄斯索斯的长线会以离开或返回维斯特洛的节点表示。"],
         "征服战争": ["历史时期", "伊耿一世、维桑尼亚和雷妮丝骑龙入侵维斯特洛，六个王国迅速臣服，多恩则长期抵抗；君临、赫伦堡和怒火燎原战场是地图上的关键节点。"],
         "篡夺者战争": ["历史时期", "又称劳勃叛乱，由莱安娜失踪、史塔克父子被处决和疯王暴政引爆；三叉戟河之战与君临陷落终结坦格利安近三百年统治。"],
         "五王之战": ["历史时期", "劳勃死后爆发的继承内战，乔佛里、史坦尼斯、蓝礼、罗柏和巴隆等宣称或割据势力相继参战；河间地、君临、风息堡和北境是主要战场。"],
@@ -3102,7 +2827,6 @@
         getEventsForCharacter(characterId).slice(0, 6).forEach((event) => {
           addTerm(event.title);
           addTerm(event.place);
-          addTerm(event.category);
         });
       }
 
@@ -3110,7 +2834,6 @@
         const event = majorEvents.find((item) => item.id === entry.eventId);
         if (event) {
           addTerm(event.place);
-          addTerm(event.category);
           getEventCharacters(event).forEach((person) => addTerm(person.name));
           scanText(`${event.title} ${event.time} ${event.place} ${event.related} ${event.summary} ${event.impact}`);
         }
@@ -3144,198 +2867,8 @@
       });
     }
 
-    function renderCharacterRoutes() {
-      const routeList = document.getElementById("characterRouteList");
-      const routeSummary = document.getElementById("routeSummary");
-      const clearButton = document.getElementById("clearCharacterRoute");
-      const entries = getRoutableCharacters();
-
-      routeList.innerHTML = entries.map(({ id, person, events }) => {
-        const color = getRouteColor(id);
-        return `
-          <button class="character-route-button" type="button" data-character-route-id="${id}" style="--route-color:${color.color};--route-light:${color.light}">
-            <span class="avatar">${renderAvatarMedia(person)}</span>
-            <span>
-              <span class="route-person-name">${escapeHtml(person.name)}</span>
-              <span class="route-count">${events.length} 站</span>
-            </span>
-          </button>
-        `;
-      }).join("");
-
-      routeList.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-character-route-id]");
-        if (!button) return;
-        selectCharacterRoute(button.dataset.characterRouteId, { fit: true });
-      });
-
-      routeSummary.addEventListener("click", (event) => {
-        const item = event.target.closest("[data-route-event-id]");
-        if (!item) return;
-        selectEvent(item.dataset.routeEventId, { fly: true, openPopup: true });
-      });
-
-      clearButton.addEventListener("click", clearCharacterRoute);
-    }
-
-    function getRoutableCharacters() {
-      return characterMatchRules
-        .map((rule) => ({
-          id: rule.id,
-          person: characters[rule.id],
-          events: getEventsForCharacter(rule.id)
-        }))
-        .filter((entry) => entry.person && entry.events.length >= 2);
-    }
-
     function getEventsForCharacter(characterId) {
       return majorEvents.filter((event) => getEventCharacterIds(event).includes(characterId));
-    }
-
-    function selectCharacterRoute(characterId, options = {}) {
-      const person = characters[characterId];
-      const routeEvents = getEventsForCharacter(characterId);
-      if (!person || routeEvents.length === 0) return;
-
-      const color = getRouteColor(characterId);
-      const coords = routeEvents.map((event) => event.displayCoord || event.coord);
-
-      characterRouteLayer.clearLayers();
-      characterRouteState.characterId = characterId;
-      characterRouteState.eventIds = routeEvents.map((event) => event.id);
-      characterRouteState.markers = [];
-
-      document.querySelectorAll("[data-character-route-id]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.characterRouteId === characterId);
-      });
-
-      if (coords.length > 1) {
-        L.polyline(coords, {
-          pane: "character-route-lines",
-          color: "rgba(8, 6, 4, 0.72)",
-          weight: 8,
-          opacity: 0.72,
-          lineCap: "round",
-          lineJoin: "round",
-          interactive: false
-        }).addTo(characterRouteLayer);
-
-        L.polyline(coords, {
-          pane: "character-route-lines",
-          color: color.color,
-          weight: 3,
-          opacity: 0.92,
-          dashArray: "9 8",
-          lineCap: "round",
-          lineJoin: "round",
-          interactive: false
-        }).addTo(characterRouteLayer);
-      }
-
-      routeEvents.forEach((event, index) => {
-        const marker = L.marker(event.displayCoord || event.coord, {
-          pane: "character-route-stops",
-          icon: createRouteStopIcon(index + 1, color, event.id === characterRouteState.activeEventId),
-          title: `${person.name}路线：${event.title}`,
-          zIndexOffset: 1200,
-          riseOnHover: true
-        })
-          .addTo(characterRouteLayer)
-          .bindPopup(getRoutePopupHtml(person, event, index + 1, routeEvents.length));
-
-        marker.on("click", () => selectEvent(event.id, { fly: false, openPopup: false }));
-        characterRouteState.markers.push({ marker, eventId: event.id, step: index + 1, color });
-      });
-
-      renderRouteSummary(characterId, routeEvents);
-      updateRouteStopActive(characterRouteState.activeEventId);
-
-      if (options.fit !== false && coords.length > 1) {
-        map.flyToBounds(L.latLngBounds(coords).pad(0.08), {
-          paddingTopLeft: isMobileViewport() ? [22, 86] : [28, 92],
-          paddingBottomRight: isMobileViewport() ? [22, 150] : [430, 46],
-          maxZoom: 0.18,
-          duration: 0.85,
-          easeLinearity: 0.25
-        });
-      } else if (options.fit !== false && coords.length === 1) {
-        map.flyTo(coords[0], Math.max(map.getZoom(), -0.15), { duration: 0.75, easeLinearity: 0.25 });
-      }
-
-      if (isMobileViewport()) {
-        document.body.classList.remove("mobile-events-open");
-      }
-    }
-
-    function clearCharacterRoute() {
-      characterRouteLayer.clearLayers();
-      characterRouteState.characterId = null;
-      characterRouteState.eventIds = [];
-      characterRouteState.markers = [];
-
-      document.querySelectorAll("[data-character-route-id]").forEach((button) => {
-        button.classList.remove("active");
-      });
-
-      document.getElementById("routeSummary").innerHTML = "选择主角，查看其按时间排列的地点路线。";
-    }
-
-    function renderRouteSummary(characterId, routeEvents) {
-      const person = characters[characterId];
-      const places = [...new Set(routeEvents.map((event) => event.place))].slice(0, 5).join(" → ");
-      document.getElementById("routeSummary").innerHTML = `
-        <div><b>${escapeHtml(person.name)}</b> · ${routeEvents.length} 个时间地点</div>
-        <div>${escapeHtml(places)}${routeEvents.length > 5 ? " → ..." : ""}</div>
-        <ol class="route-stop-list">
-          ${routeEvents.map((event, index) => `
-            <li>
-              <button class="route-stop-item" type="button" data-route-event-id="${event.id}">
-                <span class="route-stop-index">${index + 1}</span>
-                <span>
-                  <span class="route-stop-title">${escapeHtml(event.title)}</span>
-                  <span class="route-stop-meta">${escapeHtml(event.time)} · ${escapeHtml(event.place)}</span>
-                </span>
-              </button>
-            </li>
-          `).join("")}
-        </ol>
-      `;
-    }
-
-    function createRouteStopIcon(step, color, active = false) {
-      return L.divIcon({
-        className: "route-stop-marker",
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
-        popupAnchor: [0, -12],
-        html: `<div class="route-stop-token${active ? " active" : ""}" style="--route-color:${color.color};--route-light:${color.light}">${step}</div>`
-      });
-    }
-
-    function getRoutePopupHtml(person, event, step, total) {
-      return `
-        <b>${linkifyTerms(person.name)}路线 · ${step}/${total}</b><br>
-        ${linkifyTerms(event.time)}<br>
-        <span style="color:#c8b58d">${linkifyTerms(event.place)}</span><br>
-        ${linkifyTerms(event.title)}
-      `;
-    }
-
-    function getRouteColor(characterId) {
-      const index = Math.max(0, characterMatchRules.findIndex((rule) => rule.id === characterId));
-      const [color, light] = routePalette[index % routePalette.length];
-      return { color, light };
-    }
-
-    function updateRouteStopActive(eventId) {
-      characterRouteState.activeEventId = eventId;
-      document.querySelectorAll("[data-route-event-id]").forEach((item) => {
-        item.classList.toggle("active", item.dataset.routeEventId === eventId);
-      });
-
-      characterRouteState.markers.forEach(({ marker, eventId: markerEventId, step, color }) => {
-        marker.setIcon(createRouteStopIcon(step, color, markerEventId === eventId));
-      });
     }
 
     function selectEvent(eventId, options = {}) {
@@ -3355,7 +2888,6 @@
 
       const activeButton = document.querySelector(`[data-event-id="${eventId}"]`);
       activeButton?.scrollIntoView({ block: "nearest" });
-      updateRouteStopActive(eventId);
 
       const eventMarker = eventMarkers.get(eventId)?.marker;
       if (options.fly) {
@@ -3381,7 +2913,7 @@
         <div class="event-meta">
           <div><span>时间</span><br>${linkifyTerms(event.time)}</div>
           <div><span>地点</span><br>${linkifyTerms(event.place)}</div>
-          <div><span>类型</span><br>${linkifyTerms(event.category)}</div>
+          <div><span>类型</span><br>${escapeHtml(event.category)}</div>
           <div><span>坐标</span><br>${Math.round(event.coord[1])}, ${Math.round(event.coord[0])}</div>
         </div>
         <p>${linkifyTerms(event.summary)}</p>
