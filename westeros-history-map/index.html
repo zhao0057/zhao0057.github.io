@@ -1086,10 +1086,16 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    // 高分辨率中文地图图片。项目路径发布时 HTML 在子目录，底图保留在 Pages 根目录。
-    const MAP_URL = window.location.pathname.includes("/westeros-history-map/")
-      ? "../Map_of_westeros_CN.jpg"
-      : "./Map_of_westeros_CN.jpg";
+    // 优先加载 WebP 压缩底图，明显减少 GitHub Pages 首屏等待；JPG 保留为回退。
+    const getAssetUrl = (filename) => window.location.pathname.includes("/westeros-history-map/")
+      ? `../${filename}`
+      : `./${filename}`;
+    const MAP_URL = getAssetUrl(
+      window.matchMedia("(max-width: 760px)").matches
+        ? "Map_of_westeros_CN_1260.webp"
+        : "Map_of_westeros_CN.webp"
+    );
+    const MAP_FALLBACK_URL = getAssetUrl("Map_of_westeros_CN.jpg");
     const MAP_SOURCE_URL = "D:/private/Map_of_westeros_CN.jpg";
     const SHOW_TRANSLATION_LABELS = false;
     const DEMO_MODE = new URLSearchParams(window.location.search).has("demo");
@@ -2566,8 +2572,19 @@
       alt: "High-resolution map of Westeros"
     }).addTo(map);
 
+    const mapImageElement = mapOverlay.getElement();
+    mapImageElement?.setAttribute("decoding", "async");
+    mapImageElement?.setAttribute("fetchpriority", "high");
+
+    let didTryMapFallback = false;
     mapOverlay.on("error", () => {
-      const message = "地图图片加载失败：请检查 MAP_URL，或确认 Map_of_westeros_CN.jpg 与 HTML 在同一目录。";
+      if (!didTryMapFallback && MAP_URL !== MAP_FALLBACK_URL) {
+        didTryMapFallback = true;
+        mapOverlay.setUrl(MAP_FALLBACK_URL);
+        return;
+      }
+
+      const message = "地图图片加载失败：请检查底图文件，或确认 Map_of_westeros_CN.jpg 与 HTML 路径匹配。";
       L.popup({ closeButton: false, autoClose: false })
         .setLatLng([IMAGE_SIZE.height / 2, IMAGE_SIZE.width / 2])
         .setContent(`<b>ImageOverlay Error</b><br>${message}`)
